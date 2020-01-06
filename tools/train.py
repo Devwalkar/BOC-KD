@@ -22,13 +22,13 @@ from importlib import import_module
 from utils.data_builder import Dataset_Loader
 from utils.Model_builder import Model_builder
 from utils.Losses import Combined_Loss as Total_loss
-from utils.Accuracy_Plotter import saver_and_plotter
+from utils.Accuracy_Saver_and_Plotter import saver_and_plotter
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def parser():
     parser = argparse.ArgumentParser(description='Parser for training')
-    parser.add_argument('--cfg',default="configs/train_cifar10.py",help='Configuration file')
+    parser.add_argument('--cfg',default="configs/config_template.py",help='Configuration file')
     args = parser.parse_args()
     return args
 
@@ -123,8 +123,10 @@ def trainer(configer,model,Train_loader,Val_loader):
     Best_Val_accuracy = 0
     Train_accuracies = [[] for i in range(no_students+1)]
     Train_losses = [[] for i in range(no_students+1)]
+    Train_ind_losses = [[] for i in range(3)]
     Val_accuracies = [[] for i in range(no_students+1)]
     Val_losses = [[] for i in range(no_students+1)]
+    Val_ind_losses = [[] for i in range(3)]
 
     print ('---------- Starting Training')
     for i in range(Epochs):
@@ -133,29 +135,31 @@ def trainer(configer,model,Train_loader,Val_loader):
 
             scheduler.step()
 
-        model,Epoch_train_set_accuracy,Epoch_train_set_loss = Train_epoch(configer,model,Train_loader,Current_cfg,i)
+        model,Epoch_train_set_accuracy,Epoch_train_set_loss,Epoch_train_individual_loss = Train_epoch(configer,model,Train_loader,Current_cfg,i)
 
-        Train_accuracies = [Train_accuracies[i].append(Epoch_train_set_accuracy) for i in range(no_students+1)]
-        Train_losses = [Train_losses[i].append(Epoch_train_set_loss) for i in range(no_students+1)]
+        Train_accuracies = [Train_accuracies[i].append(Epoch_train_set_accuracy[i]) for i in range(no_students+1)]
+        Train_losses = [Train_losses[i].append(Epoch_train_set_loss[i]) for i in range(no_students+1)]
+        Train_ind_losses = [Train_ind_losses[i].append(Epoch_train_individual_loss[i]) for i in range(3)]
 
         if (i%Test_interval) == 0:
 
-            model,Epoch_Val_set_accuracy,Epoch_Val_set_loss = Val_epoch(configer,model,Val_loader,Current_cfg,i)           
+            model,Epoch_Val_set_accuracy,Epoch_Val_set_loss,Epoch_Val_individual_loss = Val_epoch(configer,model,Val_loader,Current_cfg,i)           
 
-            Val_accuracies = [Val_accuracies[i].append(Epoch_Val_set_accuracy) for i in range(no_students+1)]
-            Val_losses = [Val_losses[i].append(Epoch_Val_set_loss) for i in range(no_students+1)]
+            Val_accuracies = [Val_accuracies[i].append(Epoch_Val_set_accuracy[i]) for i in range(no_students+1)]
+            Val_losses = [Val_losses[i].append(Epoch_Val_set_loss[i]) for i in range(no_students+1)]
+            Val_ind_losses = [Val_ind_losses[i].append(Epoch_Val_individual_loss[i]) for i in range(3)]
 
             if Epoch_Val_set_accuracy[0] > Best_Val_accuracy:
                 print("Best Validation accuracy found uptil now !! Saving model state....")
                 Best_Val_accuracy = Epoch_Val_set_accuracy[0]
 
-                Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Val_accuracies,Val_losses,i)
+                Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
 
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
 
                 scheduler.step(Epoch_Val_set_loss)
 
-    Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Val_accuracies,Val_losses,i)
+    Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
 
 
 def Train_epoch(configer,model,Train_loader,Current_cfg,i):
@@ -180,6 +184,7 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
     # Some useful constants
     num_train_batches = len(Train_loader)
     running_combined_loss = 0
+    running_student_losses = np.zeros(No_students)
     running_individual_losses = np.zeros(No_students)
     Total_correct = np.zeros(No_students)
 
@@ -204,34 +209,38 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
         optimizer.step()
 
         running_combined_loss += Combined_loss.item()
+        running_individual_losses += np.asarray(criterion.Individual_loss)
 
         for j in range(No_students):
-            running_individual_losses[j]+= Individual_normal_losses[j].item()
+            running_student_losses[j]+= Individual_normal_losses[j].item()
+        
 
         Correct_batch = np.asarray(get_count(outputs, labels))
         Total_correct += Correct_batch
 
         Total_count += len(Input)
 
-        print('Epoch: {} | Iter: {}/{} |\nRunning loss:\nOverall : {:.3f}\nIndividual : {:.3f} |\nTime elapsed: {:.2f}'
-                ' mins'.format(i,batch_idx + 1, num_train_batches,
+        print('Iter: {}/{} |\nRunning loss:\nOverall : {:.3f}\nIndividual : {:.3f}\nStudent : {:.3f} |\nTime elapsed: {:.2f}'
+                ' mins'.format(batch_idx + 1, num_train_batches,
                                 running_combined_loss/(batch_idx + 1),
                                 list(running_individual_losses/(batch_idx + 1)),
+                                list(running_student_losses/(batch_idx + 1)),
                                 (time.time() - start) / 60), end='\r',
                 flush=True)
 
         del Input, labels, outputs, Intermmediate_maps
 
     Epoch_avg_loss = float(running_combined_loss)/num_train_batches
-    Epoch_loss_list = [Epoch_avg_loss] + list(running_individual_losses/num_train_batches)
+    Epoch_loss_list = [Epoch_avg_loss] + list(running_student_losses/num_train_batches)
     Epoch_accuracy = list((Total_correct/Total_count)*100)
+    Epoch_individual_loss_list = list(running_individual_losses/num_train_batches)
 
     print('\nTraining --> \nAccuracy: Teacher: {:.3f}\nStudents: {:.3f} |\nOverall Loss: {:.3f}'.format(Epoch_accuracy[0],
                                                                                                         Epoch_accuracy[1:],
                                                                                                         Epoch_avg_loss
                                                                                                         ))
 
-    return model,Epoch_accuracy,Epoch_loss_list
+    return model,Epoch_accuracy,Epoch_loss_list,Epoch_individual_loss_list
 
 
 def Val_epoch(configer,model,Val_loader,Current_cfg,i):  
@@ -252,6 +261,7 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
     # Some useful constants
     num_train_batches = len(Val_loader)
     running_combined_loss = 0
+    running_student_losses = np.zeros(No_students)
     running_individual_losses = np.zeros(No_students)
     Total_correct = np.zeros(No_students)
 
@@ -272,34 +282,37 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
             Combined_loss,Individual_normal_losses = criterion(outputs, labels, Intermmediate_maps)
 
             running_combined_loss += Combined_loss.item()
+            running_individual_losses += np.asarray(criterion.Individual_loss)
 
             for j in range(No_students):
-                running_individual_losses[j]+= Individual_normal_losses[j].item()
+                running_student_losses[j]+= Individual_normal_losses[j].item()
 
             Correct_batch = np.asarray(get_count(outputs, labels))
             Total_correct += Correct_batch
 
             Total_count += len(Input)
 
-            print('Iter: {}/{} |\nRunning loss:\nOverall : {:.3f}\nIndividual : {:.3f} |\nTime elapsed: {:.2f}'
+            print('Iter: {}/{} |\nRunning loss:\nOverall : {:.3f}\nIndividual : {:.3f}\nStudent : {:.3f} |\nTime elapsed: {:.2f}'
                     ' mins'.format(batch_idx + 1, num_train_batches,
                                     running_combined_loss/(batch_idx + 1),
                                     list(running_individual_losses/(batch_idx + 1)),
+                                    list(running_student_losses/(batch_idx + 1)),
                                     (time.time() - start) / 60), end='\r',
                     flush=True)
 
             del Input, labels, outputs, Intermmediate_maps
 
     Epoch_avg_loss = float(running_combined_loss)/num_train_batches
-    Epoch_loss_list = [Epoch_avg_loss] + list(running_individual_losses/num_train_batches)
+    Epoch_loss_list = [Epoch_avg_loss] +  list(running_student_losses/num_train_batches)
     Epoch_accuracy = list((Total_correct/Total_count)*100)
+    Epoch_individual_loss_list = list(running_individual_losses/num_train_batches)
 
     print('\nValidating --> \nAccuracy: Teacher: {:.3f}\nStudents: {:.3f} |\nOverall Loss: {:.3f}'.format(Epoch_accuracy[0],  
                                                                                                           Epoch_accuracy[1:],
                                                                                                           Epoch_avg_loss
                                                                                                           ))
 
-    return model,Epoch_accuracy,Epoch_loss_list
+    return model,Epoch_accuracy,Epoch_loss_list,Epoch_individual_loss_list
 
 
 def Model_State_Saver(model,
@@ -307,8 +320,10 @@ def Model_State_Saver(model,
                       Current_cfg,
                       Train_accuracies,
                       Train_losses,
+                      Train_ind_losses,
                       Val_accuracies,
                       Val_losses,
+                      Val_ind_losses,
                       i
                       ):
 
@@ -339,7 +354,9 @@ def Model_State_Saver(model,
     saver_and_plotter(Train_accuracies = Train_accuracies, 
             Val_accuracies = Val_accuracies,
 			Train_losses = Train_losses,
+            Train_ind_losses = Train_ind_losses,
 			Val_losses = Val_losses,
+            Val_ind_losses = Val_ind_losses,
 			Store_root = Store_root,
 			run_id = run_id,
 			No_students = No_students

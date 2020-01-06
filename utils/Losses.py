@@ -132,13 +132,13 @@ class Combined_Loss(nn.Module):
         Individual_normal_losses = self.Normal_Loss(preds,labels)
 
         Loss_A = self.contri_params[0]*sum(Individual_normal_losses)
-        self.Individual_loss.append(Loss_A)
+        self.Individual_loss.append(Loss_A.item())
         Combined_loss += Loss_A
 
         # Intermmediate loss computation 
 
         Loss_B = self.contri_params[1]*self.Intermmediate_loss(intermmediate_maps)
-        self.Individual_loss.append(Loss_B)
+        self.Individual_loss.append(Loss_B.item())
         Combined_loss += Loss_B
 
         # KL loss computation 
@@ -151,6 +151,6 @@ class Combined_Loss(nn.Module):
             Loss_C += self.contri_params[2]*self.KL_Loss(teacher_pred,Student_pred)
 
         Combined_loss +=Loss_C
-        self.Individual_loss.append(Loss_C)
+        self.Individual_loss.append(Loss_C.item())
 
         return Combined_loss,Individual_normal_losses
