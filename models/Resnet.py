@@ -44,6 +44,7 @@ def depth_channel_computer(no_blocks = 3,
                            ):
 
     Depth_channels_list = []
+    Expansion_fix_list = []
 
     if no_blocks==1:
         for j in range(no_students):
@@ -51,6 +52,10 @@ def depth_channel_computer(no_blocks = 3,
                                         original_channels[1],
                                         int(original_channels[2]*(float(no_students-j)/no_students))
                                         ])
+            Expansion_fix_list.append([1,
+                                       1,
+                                       float(no_students)/(no_students-j)
+                                       ])
     
     elif no_blocks==2:
         for j in range(no_students):
@@ -58,22 +63,31 @@ def depth_channel_computer(no_blocks = 3,
                                         int(original_channels[1]*(float(no_students-j)/no_students)),
                                         int(original_channels[2]*(float(no_students-j)/no_students))
                                         ])       
-
+            Expansion_fix_list.append([1,
+                                       float(no_students)/(no_students-j),
+                                       float(no_students)/(no_students-j)
+                                       ])
     elif no_blocks==3:
         for j in range(no_students):
             Depth_channels_list.append([int(original_channels[0]*(float(no_students-j)/no_students)),
                                         int(original_channels[1]*(float(no_students-j)/no_students)),
                                         int(original_channels[2]*(float(no_students-j)/no_students))
                                         ])    
+            Expansion_fix_list.append([float(no_students)/(no_students-j),
+                                       float(no_students)/(no_students-j),
+                                       float(no_students)/(no_students-j)
+                                       ])
 
     else:
         raise IndexError("No blocks can only be 1,2 or 3")
 
-    return Depth_channels_list
+    return Depth_channels_list,Expansion_fix_list
 
 
 class BasicBlock(nn.Module):
+
     expansion = 1
+
     __constants__ = ['downsample']
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
@@ -248,10 +262,11 @@ class Resnet_Student(nn.Module):
 
     # This builds up student model assuming outputs from the Base ResNet model
 
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
+    def __init__(self, block, layers,Expansion_fix, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
                  norm_layer=None,
-                 depth_channels = [128,256,512]
+                 depth_channels = [128,256,512],
+
                  ):
 
         super(Resnet_Student, self).__init__()
@@ -272,13 +287,14 @@ class Resnet_Student(nn.Module):
         self.base_width = width_per_group
 
         self.layer2 = self._make_layer(block, depth_channels[0], layers[1], stride=2,
-                                       dilate=replace_stride_with_dilation[0])
+                                       dilate=replace_stride_with_dilation[0],Expansion_fix= Expansion_fix[0])
         self.layer3 = self._make_layer(block, depth_channels[1], layers[2], stride=2,
-                                       dilate=replace_stride_with_dilation[1])
+                                       dilate=replace_stride_with_dilation[1],Expansion_fix= Expansion_fix[1])
         self.layer4 = self._make_layer(block, depth_channels[2], layers[3], stride=2,
-                                       dilate=replace_stride_with_dilation[2])
+                                       dilate=replace_stride_with_dilation[2],Expansion_fix= Expansion_fix[2])
+
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(depth_channels[2] * block.expansion, num_classes)
+        self.fc = nn.Linear(depth_channels[2] * int(block.expansion*Expansion_fix[2]), num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -297,7 +313,7 @@ class Resnet_Student(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
+    def _make_layer(self, block, planes, blocks,Expansion_fix, stride=1, dilate=False):
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
@@ -306,7 +322,7 @@ class Resnet_Student(nn.Module):
             stride = 1
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                conv1x1(self.inplanes, planes * block.expansion, stride),
+                conv1x1(self.inplanes, planes * int(block.expansion*Expansion_fix), stride),
                 norm_layer(planes * block.expansion),
             )
 
@@ -353,15 +369,18 @@ class BIO_Resnet(nn.Module):
 
         super(BIO_Resnet, self).__init__()
 
-        Depth_channels_list = depth_channel_computer(no_blocks=no_blocks,no_students=no_students)
+        Depth_channels_list,Expansion_fix_list = depth_channel_computer(no_blocks=no_blocks,no_students=no_students)
         self.no_students = no_students
         self.no_blocks = no_blocks
 
         # Intializing the common base resent model
 
-        self.Base_Resnet = Base_Resnet(block=block,layers=layers, num_classes=num_classes, zero_init_residual=False,
-                                       groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                                       norm_layer=None,)
+        self.Base_Resnet = Base_Resnet(block=block,layers=layers, num_classes=num_classes, 
+                                       zero_init_residual=zero_init_residual,
+                                       groups=groups, width_per_group=width_per_group, 
+                                       replace_stride_with_dilation=replace_stride_with_dilation,
+                                       norm_layer=None,
+                                       )
 
         self.Base_Resnet = self.Base_Resnet.to(device)
 
@@ -372,14 +391,16 @@ class BIO_Resnet(nn.Module):
 
         self.student_models = []
 
-        for depth_channels in Depth_channels_list:
+        for depth_channels,Expansion_fix in zip(Depth_channels_list,Expansion_fix_list):
             Student_M = Resnet_Student(block=block,layers=layers, num_classes=num_classes, 
                                                       zero_init_residual=False,
-                                                      groups=1, 
-                                                      width_per_group=64, 
-                                                      replace_stride_with_dilation=None,
+                                                      groups=groups, 
+                                                      width_per_group=width_per_group, 
+                                                      replace_stride_with_dilation=replace_stride_with_dilation,
                                                       norm_layer=None,
-                                                      depth_channels=depth_channels)
+                                                      depth_channels=depth_channels,
+                                                      Expansion_fix=Expansion_fix
+                                                      )
 
             self.student_models.append(Student_M.to(device))
 
@@ -412,22 +433,17 @@ class BIO_Resnet(nn.Module):
 
 def pretrained_weight_formatter(Arch,progress):
 
-    base_weights = dict()
 
     if Arch == "Resnet18":
         Overall_model_dict = torch.load("../models/pretrained_weights/Resnet/resnet18.pth")
     
     for key in Overall_model_dict.keys():
-
-        K = True
         for f in ["layer2","layer3","layer4","fc"]:
             if f in key:
-                K = False
-        
-        if K:
-            base_weights[key] = Overall_model_dict[key]
+                del Overall_model_dict[key]
+                break
 
-    return base_weights
+    return Overall_model_dict
 
 
 def _BIO_Resnet(arch, block, layers, pretrained, progress,num_classes, **kwargs):
