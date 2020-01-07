@@ -11,6 +11,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 def Model_builder(configer):
 
     model_name = configer.model['name']
+    No_students = configer.model["No_students"]
+    No_blocks = configer.model["No_blocks"]
     No_classes = configer.dataset_cfg["id_cfg"]["num_classes"]
     model_pretrained = configer.model['pretrained']
     model_dataparallel = configer.model["DataParallel"]
@@ -19,19 +21,24 @@ def Model_builder(configer):
     Base_freeze = configer.model["Common_base_freeze"]
 
     if model_name == "Resnet18":
-        model = Resnet.BIO_Resnet18(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
+        model = Resnet.BIO_Resnet18(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                                    No_students = No_students, No_blocks = No_blocks)
 
     elif model_name == "Resnet34":
-        model = Resnet.BIO_Resnet34(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
+        model = Resnet.BIO_Resnet34(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                                    No_students = No_students, No_blocks = No_blocks)
 
     elif model_name == "Resnet50":
-        model = Resnet.BIO_Resnet50(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
+        model = Resnet.BIO_Resnet50(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                                    No_students = No_students, No_blocks = No_blocks)
 
     elif model_name == "Resnet101":
-        model = Resnet.BIO_Resnet101(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
+        model = Resnet.BIO_Resnet101(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                                     No_students = No_students, No_blocks = No_blocks)
 
     elif model_name == "Resnet152":
-        model = Resnet.BIO_Resnet152(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
+        model = Resnet.BIO_Resnet152(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                                     No_students = No_students, No_blocks = No_blocks)
 
     else:
         raise ImportError("Model Architecture not supported")

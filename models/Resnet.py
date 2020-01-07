@@ -90,8 +90,8 @@ class BasicBlock(nn.Module):
 
     __constants__ = ['downsample']
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,downsample_fix = None,
+                 base_width=64, dilation=1, norm_layer=None, expansion_fix = 1):
         super(BasicBlock, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -103,9 +103,16 @@ class BasicBlock(nn.Module):
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(planes, planes)
-        self.bn2 = norm_layer(planes)
+        self.expansion_fix = expansion_fix
+        if expansion_fix !=1:
+            self.conv2 = conv3x3(planes, int(expansion_fix*planes))
+            self.bn2 = norm_layer(int(expansion_fix*planes))
+        else:
+            self.conv2 = conv3x3(planes, planes)
+            self.bn2 = norm_layer(planes)
+
         self.downsample = downsample
+        self.downsample_fix = downsample_fix
         self.stride = stride
 
     def forward(self, x):
@@ -118,7 +125,10 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
-        if self.downsample is not None:
+        if (self.downsample is not None):
+            identity = self.downsample(x)
+
+        if (self.downsample_fix is not None) and (self.expansion_fix !=1):
             identity = self.downsample(x)
 
         out += identity
@@ -285,6 +295,7 @@ class Resnet_Student(nn.Module):
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
+        self.First_block = True
 
         self.layer2 = self._make_layer(block, depth_channels[0], layers[1], stride=2,
                                        dilate=replace_stride_with_dilation[0],Expansion_fix= Expansion_fix[0])
@@ -320,18 +331,33 @@ class Resnet_Student(nn.Module):
         if dilate:
             self.dilation *= stride
             stride = 1
+
+        First_block_fix = 1 if self.First_block else Expansion_fix
+        self.First_block = False
+        
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                conv1x1(self.inplanes, planes * int(block.expansion*Expansion_fix), stride),
-                norm_layer(planes * block.expansion),
+                conv1x1(int(First_block_fix*self.inplanes), planes * block.expansion, stride),
+                norm_layer(planes * block.expansion)
             )
 
+        downsample_fix = nn.Sequential(
+                conv1x1(planes, planes * int(Expansion_fix*block.expansion), stride),
+                norm_layer(planes * block.expansion)
+            )        
+
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
+        layers.append(block(int(First_block_fix*self.inplanes), planes, stride, downsample, self.groups,
                             self.base_width, previous_dilation, norm_layer))
         self.inplanes = planes * block.expansion
-        for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes, groups=self.groups,
+        for i in range(1, blocks):
+
+            if i == (blocks-1):
+                layers.append(block(planes, planes,downsample_fix=downsample_fix, groups=self.groups,
+                                base_width=self.base_width, dilation=self.dilation,
+                                norm_layer=norm_layer,expansion_fix = Expansion_fix))
+            else:
+                layers.append(block(self.inplanes, planes, groups=self.groups,
                                 base_width=self.base_width, dilation=self.dilation,
                                 norm_layer=norm_layer))
 
@@ -433,17 +459,22 @@ class BIO_Resnet(nn.Module):
 
 def pretrained_weight_formatter(Arch,progress):
 
+    base_weights = dict()
 
     if Arch == "Resnet18":
         Overall_model_dict = torch.load("../models/pretrained_weights/Resnet/resnet18.pth")
     
     for key in Overall_model_dict.keys():
+
+        K = True
         for f in ["layer2","layer3","layer4","fc"]:
             if f in key:
-                del Overall_model_dict[key]
-                break
+                K = False
+        
+        if K:
+            base_weights[key] = Overall_model_dict[key]
 
-    return Overall_model_dict
+    return base_weights
 
 
 def _BIO_Resnet(arch, block, layers, pretrained, progress,num_classes, **kwargs):
