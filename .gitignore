@@ -131,3 +131,4 @@ dmypy.json
 data/
 Model_storage/
 models/pretrained_weights/
+soft_libs/
