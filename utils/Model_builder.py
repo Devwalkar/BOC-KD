@@ -1,7 +1,10 @@
 import torch 
 import pretrainedmodels as PM 
 import torch.nn as nn
-from .Mobilenet import MobileNetV2
+import sys
+sys.path.insert(0, '../')
+
+from models import Resnet
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -13,64 +16,22 @@ def Model_builder(configer):
     model_dataparallel = configer.model["DataParallel"]
     model_gpu_replica = configer.model["Multi_GPU_replica"]
     gpu_ids = configer.train_cfg["gpu"]
+    Base_freeze = configer.model["Common_base_freeze"]
 
-    if model_name == "Inceptionv3":
-        model = PM.inceptionv3(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
-
-    elif model_name == "Xception":
-        model = PM.xception(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
-
-    elif model_name == "VGG_19":
-        model = PM.vgg19(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
-
-    elif model_name == "Resnet18":
-        model = PM.resnet18(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
-
-    elif model_name == "Resnet50":
-        model = PM.resnet50(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
-
-    elif model_name == "Resnet101":
-        model = PM.resnet101(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
-
-    elif model_name == "Resnet152":
-        model = PM.resnet152(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
+    if model_name == "Resnet18":
+        model = Resnet.BIO_Resnet18(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
 
     elif model_name == "Resnet34":
-        model = PM.resnet34(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
+        model = Resnet.BIO_Resnet34(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
 
-    elif model_name == "Densenet121":
-        model = PM.densenet121(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
- 
-    elif model_name == "ResNeXt101-32":
-        model = PM.resnext101_32x4d(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
+    elif model_name == "Resnet50":
+        model = Resnet.BIO_Resnet50(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
 
-    elif model_name == "ResNeXt101-64":
-        model = PM.resnext101_64x4d(num_classes = 1000,pretrained=model_pretrained)
-        d = model.last_linear.in_features
-        model.last_linear = nn.Linear(d, No_classes) 
+    elif model_name == "Resnet101":
+        model = Resnet.BIO_Resnet101(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
 
-    elif model_name == "MobilenetV2":
-        model = MobileNetV2(n_class=No_classes)
+    elif model_name == "Resnet152":
+        model = Resnet.BIO_Resnet152(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
 
     else:
         raise ImportError("Model Architecture not supported")

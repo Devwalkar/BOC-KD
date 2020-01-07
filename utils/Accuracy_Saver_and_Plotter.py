@@ -10,7 +10,8 @@ def saver_and_plotter(Train_accuracies,
 			Val_ind_losses,
 			Store_root,
 			run_id,
-			No_students
+			No_students,
+			plot_accuracy
 			):
 
 	# Saver function for training and validation accuracy/loss arrays and
@@ -29,40 +30,42 @@ def saver_and_plotter(Train_accuracies,
 	for i in range(No_students):
 		Accuracy_plot_names.append("Student_{}".format(i+1))
 
+
 	for (train_accuracy,Val_accuracy,train_loss,Val_loss,loss_name,accuracy_name) in zip(Train_accuracies,
-	                                                                                     Val_accuracies,
-																                         Train_losses,
-																                         Val_losses,
-																						 Loss_plot_names,
-																						 Accuracy_plot_names):
+																						Val_accuracies,
+																						Train_losses,
+																						Val_losses,
+																						Loss_plot_names,
+																						Accuracy_plot_names):
+		if plot_accuracy:
 
-		train_accuracy = np.asarray(train_accuracy)
-		Val_accuracy = np.asarray(Val_accuracy)
+			train_accuracy = np.asarray(train_accuracy)
+			Val_accuracy = np.asarray(Val_accuracy)
 
-		train_loss = np.asarray(train_loss)
-		Val_loss = np.asarray(Val_loss)
+			train_loss = np.asarray(train_loss)
+			Val_loss = np.asarray(Val_loss)
 
-		assert len(train_loss) == len(Val_loss), "Loss arrays don't match !"
-		Epochs = len(train_loss)
-		A, = plt.plot(np.arange(1,Epochs+1,1),train_loss)
-		B, = plt.plot(np.arange(1,Epochs+1,1),Val_loss)
-		plt.xlabel("Number of Epochs")
-		plt.ylabel("Epoch Loss")
-		plt.legend(["Training set loss","Validation Set loss"])
-		plt.title("Train and Val Loss over epochs for {}".format(loss_name))
-		plt.savefig(os.path.join(Store_root,run_id,"Plots","Loss_comparision_{}.png".format(loss_name)))
-		plt.clf()
+			assert len(train_loss) == len(Val_loss), "Loss arrays don't match !"
+			Epochs = len(train_loss)
+			A, = plt.plot(np.arange(1,Epochs+1,1),train_loss)
+			B, = plt.plot(np.arange(1,Epochs+1,1),Val_loss)
+			plt.xlabel("Number of Epochs")
+			plt.ylabel("Epoch Loss")
+			plt.legend(["Training set loss","Validation Set loss"])
+			plt.title("Train and Val Loss over epochs for {}".format(loss_name))
+			plt.savefig(os.path.join(Store_root,run_id,"Plots","Loss_comparision_{}.png".format(loss_name)))
+			plt.clf()
 
-		assert len(train_accuracy) == len(Val_accuracy), "Accuracy arrays don't match !"
-		Epochs = len(train_accuracy)
-		A, = plt.plot(np.arange(1,Epochs+1,1),train_accuracy)
-		B, = plt.plot(np.arange(1,Epochs+1,1),Val_accuracy)
-		plt.xlabel("Number of Epochs")
-		plt.ylabel("Percent Accuracy")
-		plt.legend(["Training set Accuracy","Validation Set Accuracy"])
-		plt.title("Train and Val Accuracy over epochs for {}".format(accuracy_name))
-		plt.savefig(os.path.join(Store_root,run_id,"Plots","Accuracy_comparision_{}.png".format(accuracy_name)))
-		plt.clf()
+			assert len(train_accuracy) == len(Val_accuracy), "Accuracy arrays don't match !"
+			Epochs = len(train_accuracy)
+			A, = plt.plot(np.arange(1,Epochs+1,1),train_accuracy)
+			B, = plt.plot(np.arange(1,Epochs+1,1),Val_accuracy)
+			plt.xlabel("Number of Epochs")
+			plt.ylabel("Percent Accuracy")
+			plt.legend(["Training set Accuracy","Validation Set Accuracy"])
+			plt.title("Train and Val Accuracy over epochs for {}".format(accuracy_name))
+			plt.savefig(os.path.join(Store_root,run_id,"Plots","Accuracy_comparision_{}.png".format(accuracy_name)))
+			plt.clf()
 
     	# Saving accuracy and lose arrays 
 
@@ -75,20 +78,22 @@ def saver_and_plotter(Train_accuracies,
 
 	# Saving Individual losses i.e. Normal loss, Representation loss and KL loss
 
-	Loss_names = ["Total_Normal_Loss","Total_Intermmediate_Loss","Total_KL_Loss"]
+	if plot_accuracy:
 
-	for (train_loss,Val_loss,loss_name) in zip(Train_ind_losses,Val_ind_losses,Loss_names):
+		Loss_names = ["Total_Normal_Loss","Total_Intermmediate_Loss","Total_KL_Loss"]
 
-		train_loss = np.asarray(train_loss)
-		Val_loss = np.asarray(Val_loss)
+		for (train_loss,Val_loss,loss_name) in zip(Train_ind_losses,Val_ind_losses,Loss_names):
 
-		assert len(train_loss) == len(Val_loss), "Loss arrays don't match !"
-		Epochs = len(train_loss)
-		A, = plt.plot(np.arange(1,Epochs+1,1),train_loss)
-		B, = plt.plot(np.arange(1,Epochs+1,1),Val_loss)
-		plt.xlabel("Number of Epochs")
-		plt.ylabel("Epoch Loss")
-		plt.legend(["Training set loss","Validation Set loss"])
-		plt.title("Train and Val Loss over epochs for {}".format(loss_name))
-		plt.savefig(os.path.join(Store_root,run_id,"Plots","Loss_comparision_{}.png".format(loss_name)))
-		plt.clf()		
+			train_loss = np.asarray(train_loss)
+			Val_loss = np.asarray(Val_loss)
+
+			assert len(train_loss) == len(Val_loss), "Loss arrays don't match !"
+			Epochs = len(train_loss)
+			A, = plt.plot(np.arange(1,Epochs+1,1),train_loss)
+			B, = plt.plot(np.arange(1,Epochs+1,1),Val_loss)
+			plt.xlabel("Number of Epochs")
+			plt.ylabel("Epoch Loss")
+			plt.legend(["Training set loss","Validation Set loss"])
+			plt.title("Train and Val Loss over epochs for {}".format(loss_name))
+			plt.savefig(os.path.join(Store_root,run_id,"Plots","Loss_comparision_{}.png".format(loss_name)))
+			plt.clf()		

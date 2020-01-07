@@ -4,18 +4,18 @@
 # DL model Architecture Settings
 
 '''
-Choose DL model from "InceptionV3", "Xception", "VGG_19", "Resnet18", "Resnet34", "Resnet52", "Resnet101", "Resnet152"
-                     "DenseNet121", "MobilenetV2","ResNeXt101-32","ResNeXt101-64"
+Choose DL model from  "Resnet18", "Resnet34", "Resnet52", "Resnet101", "Resnet152"
 
 '''
 model = dict(
         name ="Resnet18",
-        pretrained = "imagenet",     # Select between "imagenet" and None
+        pretrained = True,           # Select between True and False
         No_students = 4,             # Number of student models to create for training
         No_blocks = 3,               # Number of blocks to create for intermmediate representation comparision
         DataParallel = False,        # Select between breaking single model onto
-        Multi_GPU_replica = False    # multiple GPUs or replicating model on 
+        Multi_GPU_replica = False,   # multiple GPUs or replicating model on 
                                      # multiple GPUs.Only select either of them
+        Common_base_freeze = False   # This freezes the common base to all the student models
         )
 
 

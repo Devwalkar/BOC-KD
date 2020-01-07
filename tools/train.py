@@ -246,11 +246,14 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
 def Val_epoch(configer,model,Val_loader,Current_cfg,i):  
 
     def get_count(outputs, labels):
-        """Number of correctly predicted labels.
-        """
-        pred_labels = torch.argmax(outputs, dim=1)
-        count = torch.sum(torch.eq(pred_labels, labels)).item()
-        return count
+        
+        #Number of correctly predicted labels for each student model.
+        
+        count_list = []
+        for single_model_output in outputs:
+            pred_labels = torch.argmax(single_model_output, dim=1)
+            count_list.append(torch.sum(torch.eq(pred_labels, labels)).item())
+        return count_list
 
     # Training essentials
 
@@ -330,6 +333,7 @@ def Model_State_Saver(model,
     Store_root = Current_cfg["Store_root"]
     run_id = Current_cfg["Run_id"]
     No_students = configer.model["No_students"]
+    plot_accuracy = Current_cfg["Plot_Accuracy"]
 
     if not os.path.isdir(os.path.join(Store_root,run_id)):
         os.mkdir(os.path.join(Store_root,run_id))
@@ -359,7 +363,8 @@ def Model_State_Saver(model,
             Val_ind_losses = Val_ind_losses,
 			Store_root = Store_root,
 			run_id = run_id,
-			No_students = No_students
+			No_students = No_students,
+            plot_accuracy = plot_accuracy
 			)
 
 
