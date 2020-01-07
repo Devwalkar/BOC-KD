@@ -44,7 +44,7 @@ class Intermmediate_loss(nn.Module):
         super(Intermmediate_loss,self).__init__()
         self.no_students = no_students
         self.no_blocks = no_blocks
-        self.loss_module = getattr(nn,Loss_module)
+        self.loss_module = getattr(nn,Loss_module)()
     
     def forward(self,intermmediate_maps):
 
@@ -56,9 +56,13 @@ class Intermmediate_loss(nn.Module):
 
         for i in range(self.no_blocks):
             Pseudo_Teacher_pred = intermmediate_maps[i][0]
+
+            print(Pseudo_Teacher_pred.shape)
             
             for j in range(1,self.no_students):
+                print(intermmediate_maps[i][j].shape)
                 Total_loss += self.loss_module(Pseudo_Teacher_pred,intermmediate_maps[i][j])
+
                 
         return Total_loss
 
@@ -73,7 +77,7 @@ class Normal_Loss(nn.Module):
 
         super(Normal_Loss,self).__init__()
 
-        self.loss_module = getattr(nn,loss_module)
+        self.loss_module = getattr(nn,loss_module)()
 
     def forward(self,preds,labels):
 
@@ -84,6 +88,7 @@ class Normal_Loss(nn.Module):
         Total_loss = []
 
         for model_pred in preds:
+
                 Total_loss.append(self.loss_module(model_pred,labels))
 
         return Total_loss

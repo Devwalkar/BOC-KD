@@ -7,6 +7,8 @@ except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
 
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 __all__ = ['BIO_Resnet', 'BIO_Resnet18', 'BIO_Resnet34', 'BIO_Resnet50', 'BIO_Resnet101',
            'BIO_Resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
            'wide_BIO_Resnet50_2', 'wide_BIO_Resnet101_2']
@@ -276,7 +278,7 @@ class Resnet_Student(nn.Module):
         self.layer4 = self._make_layer(block, depth_channels[2], layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2])
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.fc = nn.Linear(depth_channels[2] * block.expansion, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -357,9 +359,11 @@ class BIO_Resnet(nn.Module):
 
         # Intializing the common base resent model
 
-        self.Base_Resnet = Base_Resnet(block=block,layers=layers, num_classes=1000, zero_init_residual=False,
+        self.Base_Resnet = Base_Resnet(block=block,layers=layers, num_classes=num_classes, zero_init_residual=False,
                                        groups=1, width_per_group=64, replace_stride_with_dilation=None,
                                        norm_layer=None,)
+
+        self.Base_Resnet = self.Base_Resnet.to(device)
 
         if Base_freeze:
             self.base_freezer()
@@ -369,14 +373,15 @@ class BIO_Resnet(nn.Module):
         self.student_models = []
 
         for depth_channels in Depth_channels_list:
-
-            self.student_models.append(Resnet_Student(block=block,layers=layers, num_classes=1000, 
+            Student_M = Resnet_Student(block=block,layers=layers, num_classes=num_classes, 
                                                       zero_init_residual=False,
                                                       groups=1, 
                                                       width_per_group=64, 
                                                       replace_stride_with_dilation=None,
                                                       norm_layer=None,
-                                                      depth_channels=depth_channels))
+                                                      depth_channels=depth_channels)
+
+            self.student_models.append(Student_M.to(device))
 
     def base_freezer(self):
 
@@ -408,19 +413,26 @@ class BIO_Resnet(nn.Module):
 def pretrained_weight_formatter(Arch,progress):
 
     base_weights = dict()
-    
-    Overall_model_dict = load_state_dict_from_url(model_urls[Arch],
-                                              progress=progress)
 
+    if Arch == "Resnet18":
+        Overall_model_dict = torch.load("../models/pretrained_weights/Resnet/resnet18.pth")
+    
     for key in Overall_model_dict.keys():
-        print (key)
-        base_weights[key] = Overall_model_dict[key]
+
+        K = True
+        for f in ["layer2","layer3","layer4","fc"]:
+            if f in key:
+                K = False
+        
+        if K:
+            base_weights[key] = Overall_model_dict[key]
+
     return base_weights
 
 
-def _BIO_Resnet(arch, block, layers, pretrained, progress, **kwargs):
+def _BIO_Resnet(arch, block, layers, pretrained, progress,num_classes, **kwargs):
 
-    model = BIO_Resnet(block, layers, **kwargs)
+    model = BIO_Resnet(block, layers,num_classes=num_classes, **kwargs)
 
     if pretrained:
         state_dict = pretrained_weight_formatter(arch,progress)
@@ -429,7 +441,7 @@ def _BIO_Resnet(arch, block, layers, pretrained, progress, **kwargs):
     return model
 
 
-def BIO_Resnet18(pretrained=False, progress=True, **kwargs):
+def BIO_Resnet18(pretrained=False, progress=True,num_classes=1000, **kwargs):
     r"""BIO_Resnet-18 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -438,7 +450,7 @@ def BIO_Resnet18(pretrained=False, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _BIO_Resnet('Resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
-                   **kwargs)
+                       num_classes=num_classes,**kwargs)
 
 
 def BIO_Resnet34(pretrained=False, progress=True, **kwargs):

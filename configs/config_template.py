@@ -56,7 +56,7 @@ train_cfg = dict(
     criterion=dict(
         L1='CrossEntropyLoss',    # Loss type for normal label loss 
         L2="KL_Loss",             # Loss for teacher, student probability comparision
-        L3="MSE"                  # Loss type for Intermmediate representation loss
+        L3="MSELoss"              # Loss type for Intermmediate representation loss
     ),
 
     Loss_contribution=dict(
