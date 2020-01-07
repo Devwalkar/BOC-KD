@@ -137,27 +137,45 @@ def trainer(configer,model,Train_loader,Val_loader):
 
         model,Epoch_train_set_accuracy,Epoch_train_set_loss,Epoch_train_individual_loss = Train_epoch(configer,model,Train_loader,Current_cfg,i)
 
-        Train_accuracies = [Train_accuracies[i].append(Epoch_train_set_accuracy[i]) for i in range(no_students+1)]
-        Train_losses = [Train_losses[i].append(Epoch_train_set_loss[i]) for i in range(no_students+1)]
-        Train_ind_losses = [Train_ind_losses[i].append(Epoch_train_individual_loss[i]) for i in range(3)]
+        for j in range(no_students+1):
+            Train_accuracies[j].append(Epoch_train_set_accuracy[j])
+            Train_losses[j].append(Epoch_train_set_loss[j])
+        
+        for k in range(3):
+            Train_ind_losses[k].append(Epoch_train_individual_loss[k])
 
         if (i%Test_interval) == 0:
 
             model,Epoch_Val_set_accuracy,Epoch_Val_set_loss,Epoch_Val_individual_loss = Val_epoch(configer,model,Val_loader,Current_cfg,i)           
 
-            Val_accuracies = [Val_accuracies[i].append(Epoch_Val_set_accuracy[i]) for i in range(no_students+1)]
-            Val_losses = [Val_losses[i].append(Epoch_Val_set_loss[i]) for i in range(no_students+1)]
-            Val_ind_losses = [Val_ind_losses[i].append(Epoch_Val_individual_loss[i]) for i in range(3)]
+            print(Epoch_Val_set_accuracy)
+            print(Epoch_Val_set_loss)
+            print(Epoch_Val_individual_loss)
+
+            for j in range(no_students+1):
+                Val_accuracies[j].append(Epoch_Val_set_accuracy[j])
+                Val_losses[j].append(Epoch_Val_set_loss[j])
+            
+            for k in range(3):
+                Val_ind_losses[k].append(Epoch_Val_individual_loss[k])
 
             if Epoch_Val_set_accuracy[0] > Best_Val_accuracy:
                 print("Best Validation accuracy found uptil now !! Saving model state....")
                 Best_Val_accuracy = Epoch_Val_set_accuracy[0]
 
+                print(Val_losses)
+                print(Val_ind_losses)
+                print(Val_accuracies)
+
+                print(Train_accuracies)
+                print(Train_ind_losses)
+                print(Train_losses)
+
                 Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
 
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
 
-                scheduler.step(Epoch_Val_set_loss)
+                scheduler.step(Epoch_Val_set_loss[0])
 
     Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
 
@@ -185,8 +203,8 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
     num_train_batches = len(Train_loader)
     running_combined_loss = 0
     running_student_losses = np.zeros(No_students)
-    running_individual_losses = np.zeros(No_students)
-    Total_correct = np.zeros(No_students)
+    running_individual_losses = np.zeros(3)
+    Total_correct = np.zeros(No_students+1)
 
     Total_count = 0
 
@@ -220,13 +238,14 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
 
         Total_count += len(Input)
 
-        print('Iter: {}/{} |\nRunning loss:\nOverall : {:.3f}\nIndividual : {:.3f}\nStudent : {:.3f} |\nTime elapsed: {:.2f}'
-                ' mins'.format(batch_idx + 1, num_train_batches,
+        print('Iter: {}/{} | Running loss:Overall : {:.3f}'
+               ' Individual : Normal: {:.3f} Intermmediate: {:.3f} KL:{:.3f} Student : {} | Time elapsed: {:.2f} mins '.format(batch_idx + 1, num_train_batches,
                                 running_combined_loss/(batch_idx + 1),
-                                list(running_individual_losses/(batch_idx + 1)),
+                                running_individual_losses[0]/(batch_idx + 1),
+                                running_individual_losses[1]/(batch_idx + 1),
+                                running_individual_losses[2]/(batch_idx + 1),
                                 list(running_student_losses/(batch_idx + 1)),
-                                (time.time() - start) / 60), end='\r',
-                flush=True)
+                                (time.time() - start) / 60),end="\n",flush=True)
 
         del Input, labels, outputs, Intermmediate_maps
 
@@ -235,7 +254,7 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
     Epoch_accuracy = list((Total_correct/Total_count)*100)
     Epoch_individual_loss_list = list(running_individual_losses/num_train_batches)
 
-    print('\nTraining --> \nAccuracy: Teacher: {:.3f}\nStudents: {:.3f} |\nOverall Loss: {:.3f}'.format(Epoch_accuracy[0],
+    print('\nTraining --> \nAccuracy: Teacher: {:.3f}\nStudents: {} |\nOverall Loss: {:.3f}'.format(Epoch_accuracy[0],
                                                                                                         Epoch_accuracy[1:],
                                                                                                         Epoch_avg_loss
                                                                                                         ))
@@ -265,8 +284,8 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
     num_train_batches = len(Val_loader)
     running_combined_loss = 0
     running_student_losses = np.zeros(No_students)
-    running_individual_losses = np.zeros(No_students)
-    Total_correct = np.zeros(No_students)
+    running_individual_losses = np.zeros(3)
+    Total_correct = np.zeros(No_students+1)
 
     Total_count = 0
 
@@ -295,13 +314,15 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
 
             Total_count += len(Input)
 
-            print('Iter: {}/{} |\nRunning loss:\nOverall : {:.3f}\nIndividual : {:.3f}\nStudent : {:.3f} |\nTime elapsed: {:.2f}'
-                    ' mins'.format(batch_idx + 1, num_train_batches,
+            print('Iter: {}/{} | Running loss: Overall : {:.3f} '
+            ' Individual : Normal:{:.3f} Intermmediate:{:.3f} KL:{} Student : {:.3f} | Time elapsed: {:.2f} mins'.format(batch_idx + 1, num_train_batches,
                                     running_combined_loss/(batch_idx + 1),
-                                    list(running_individual_losses/(batch_idx + 1)),
+                                    running_individual_losses[0]/(batch_idx + 1),
+                                    running_individual_losses[1]/(batch_idx + 1),
+                                    running_individual_losses[2]/(batch_idx + 1),
                                     list(running_student_losses/(batch_idx + 1)),
-                                    (time.time() - start) / 60), end='\r',
-                    flush=True)
+                                    (time.time() - start) / 60), end='\r',flush=True)
+            sys.stdout.flush()
 
             del Input, labels, outputs, Intermmediate_maps
 
@@ -310,7 +331,7 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
     Epoch_accuracy = list((Total_correct/Total_count)*100)
     Epoch_individual_loss_list = list(running_individual_losses/num_train_batches)
 
-    print('\nValidating --> \nAccuracy: Teacher: {:.3f}\nStudents: {:.3f} |\nOverall Loss: {:.3f}'.format(Epoch_accuracy[0],  
+    print('\nValidating --> \nAccuracy: Teacher: {:.3f}\nStudents: {} |\nOverall Loss: {:.3f}'.format(Epoch_accuracy[0],  
                                                                                                           Epoch_accuracy[1:],
                                                                                                           Epoch_avg_loss
                                                                                                           ))

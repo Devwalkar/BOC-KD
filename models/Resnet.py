@@ -387,7 +387,7 @@ class BIO_Resnet(nn.Module):
 
         # Initializing contribution weights for teacher output
 
-        self.weights = Variable(torch.Tensor((float(1)/self.no_students)*np.ones([1,self.no_students,1]),dtype=torch.float32),
+        self.weights = Variable(torch.Tensor((float(1)/self.no_students)*np.ones([1,self.no_students,1])),
                                 requires_grad= True).to(device)
 
     def base_freezer(self):

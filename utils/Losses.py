@@ -58,11 +58,9 @@ class Intermmediate_loss(nn.Module):
             Pseudo_Teacher_pred = intermmediate_maps[i][0]
 
             Pseudo_Teacher_pred = Pseudo_Teacher_pred.mean(1).squeeze(1)
-            print(Pseudo_Teacher_pred.shape)
             
             for j in range(1,self.no_students):
                 intermmediate_map = intermmediate_maps[i][j].mean(1).squeeze(1)
-                print(intermmediate_maps[i][j].shape)
                 Total_loss += self.loss_module(Pseudo_Teacher_pred,intermmediate_map)
 
                 
