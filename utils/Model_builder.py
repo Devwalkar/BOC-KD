@@ -17,21 +17,28 @@ def Model_builder(configer):
     model_gpu_replica = configer.model["Multi_GPU_replica"]
     gpu_ids = configer.train_cfg["gpu"]
     Base_freeze = configer.model["Common_base_freeze"]
+    no_students = configer.model["No_students"]
+    no_blocks = configer.model["No_blocks"]
 
     if model_name == "Resnet18":
-        model = Resnet.BIO_Resnet18(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
+        model = Resnet.BIO_Resnet18(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                                    no_students=no_students,no_blocks=no_blocks)
 
     elif model_name == "Resnet34":
-        model = Resnet.BIO_Resnet34(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
+        model = Resnet.BIO_Resnet34(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                                    no_students=no_students,no_blocks=no_blocks)
 
     elif model_name == "Resnet50":
-        model = Resnet.BIO_Resnet50(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
+        model = Resnet.BIO_Resnet50(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                                    no_students=no_students,no_blocks=no_blocks)
 
     elif model_name == "Resnet101":
-        model = Resnet.BIO_Resnet101(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
+        model = Resnet.BIO_Resnet101(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                                     no_students=no_students,no_blocks=no_blocks)
 
     elif model_name == "Resnet152":
-        model = Resnet.BIO_Resnet152(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze)
+        model = Resnet.BIO_Resnet152(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                                     no_students=no_students,no_blocks=no_blocks)
 
     else:
         raise ImportError("Model Architecture not supported")

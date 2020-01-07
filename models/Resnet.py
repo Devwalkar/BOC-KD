@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+from torch.autograd import Variable 
+import numpy as np
 
 try:
     from torch.hub import load_state_dict_from_url
@@ -357,7 +359,7 @@ class BIO_Resnet(nn.Module):
         self.no_students = no_students
         self.no_blocks = no_blocks
 
-        # Intializing the common base resent model
+        # Initializing the common base resent model
 
         self.Base_Resnet = Base_Resnet(block=block,layers=layers, num_classes=num_classes, zero_init_residual=False,
                                        groups=1, width_per_group=64, replace_stride_with_dilation=None,
@@ -368,7 +370,7 @@ class BIO_Resnet(nn.Module):
         if Base_freeze:
             self.base_freezer()
 
-        # Intializing student models
+        # Initializing student models
 
         self.student_models = []
 
@@ -382,6 +384,11 @@ class BIO_Resnet(nn.Module):
                                                       depth_channels=depth_channels)
 
             self.student_models.append(Student_M.to(device))
+
+        # Initializing contribution weights for teacher output
+
+        self.weights = Variable(torch.Tensor((float(1)/self.no_students)*np.ones([1,self.no_students,1]),dtype=torch.float32),
+                                requires_grad= True).to(device)
 
     def base_freezer(self):
 
@@ -399,10 +406,17 @@ class BIO_Resnet(nn.Module):
         for i in range(self.no_students):
             Final_out,Inter_reps = self.student_models[i](x)
             Student_final_outs.append(Final_out)
+            if i==0:
+                Combined_student_outs = Final_out.unsqueeze(1)
+            else:
+                Combined_student_outs = torch.cat((Combined_student_outs,Final_out.unsqueeze(1)),dim=1) # Combined_student_outs shape : (Batch_size, num_classes) 
 
             for j in range(self.no_blocks):
                 Student_intermmediate_reps[j].append(Inter_reps[j])
 
+        Teacher_out = torch.sum(Combined_student_outs,dim=1).squeeze(1)               # Teacher out shape : (Batch_size, num_classes)
+
+        Student_final_outs = [Teacher_out] + Student_final_outs           
 
         return Student_final_outs,Student_intermmediate_reps
 
