@@ -10,7 +10,7 @@ Choose DL model from  "Resnet18", "Resnet34", "Resnet52", "Resnet101", "Resnet15
 model = dict(
         name ="Resnet18",
         pretrained = True,           # Select between True and False
-        No_students = 4,             # Number of student models to create for training
+        No_students = 5,             # Number of student models to create for training
         No_blocks = 3,               # Number of blocks to create for intermmediate representation comparision
         DataParallel = False,        # Select between breaking single model onto
         Multi_GPU_replica = False,   # multiple GPUs or replicating model on 
@@ -31,12 +31,12 @@ dataset_cfg = dict(
         root= "../data",
         name= "CIFAR10",
         num_classes= 10,
-        download= False   # Keep true to download dataset through torch API
+        download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
         batch_size=128,
         shuffle=True,
-        num_workers=8
+        num_workers=20
     ),
     val_cfg=dict(
         batch_size=128,

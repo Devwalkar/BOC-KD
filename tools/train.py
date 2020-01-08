@@ -197,7 +197,7 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
 
     Total_count = 0
 
-    print('*' * 20, 'TRAINING EPOCH {}'.format(i+1), '*' * 20)
+    print('\n','*' * 20, 'TRAINING EPOCH {}'.format(i+1), '*'* 20,"\n")
 
     start = time.time()
     model.train()
@@ -244,6 +244,11 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
     Epoch_accuracy = list((Total_correct/Total_count)*100)
     Epoch_individual_loss_list = list(running_individual_losses/num_train_batches)
 
+    print('\ntraining epoch results --> \nAccuracy: Teacher: {:.3f}\nStudents: {} |\nOverall Loss: {:.3f}'.format(Epoch_accuracy[0],  
+                                                                                                          Epoch_accuracy[1:],
+                                                                                                          Epoch_avg_loss
+                                                                                                          ))
+
     return model,Epoch_accuracy,Epoch_loss_list,Epoch_individual_loss_list
 
 
@@ -274,7 +279,7 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
 
     Total_count = 0
 
-    print('*' * 20, 'VALIDATING EPOCH {}'.format(i+1), '*' * 20)
+    print('\n','*' * 20, 'VALIDATING EPOCH {}'.format(i+1), '*' * 20,"\n")
 
     start = time.time()
     model.eval()
@@ -316,7 +321,7 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
     Epoch_accuracy = list((Total_correct/Total_count)*100)
     Epoch_individual_loss_list = list(running_individual_losses/num_train_batches)
 
-    print('\nValidating --> \nAccuracy: Teacher: {:.3f}\nStudents: {} |\nOverall Loss: {:.3f}'.format(Epoch_accuracy[0],  
+    print('\nValidating epoch results--> \nAccuracy: Teacher: {:.3f}\nStudents: {} |\nOverall Loss: {:.3f}'.format(Epoch_accuracy[0],  
                                                                                                           Epoch_accuracy[1:],
                                                                                                           Epoch_avg_loss
                                                                                                           ))
