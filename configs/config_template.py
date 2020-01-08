@@ -4,7 +4,7 @@
 # DL model Architecture Settings
 
 '''
-Choose DL model from  "Resnet18", "Resnet34", "Resnet52", "Resnet101", "Resnet152"
+Choose DL model from  "Resnet18", "Resnet34", "Resnet50", "Resnet101", "Resnet152"
 
 '''
 model = dict(
@@ -12,10 +12,11 @@ model = dict(
         pretrained = True,           # Select between True and False
         No_students = 5,             # Number of student models to create for training
         No_blocks = 3,               # Number of blocks to create for intermmediate representation comparision
-        DataParallel = False,        # Select between breaking single model onto
+        DataParallel = True,        # Select between breaking single model onto
         Multi_GPU_replica = False,   # multiple GPUs or replicating model on 
                                      # multiple GPUs.Only select either of them
-        Common_base_freeze = False   # This freezes the common base to all the student models
+        Common_base_freeze = True,   # This freezes the common base to all the student models
+        gpu=[0,1,2,3,4],              # For Resnet50(4 stu) recommended 3 GPUs, Resnet101(4 stu) recommended 5 GPUs
         )
 
 
@@ -78,7 +79,6 @@ train_cfg = dict(
     test_interval = 1,
     plot_accuracy_graphs=True,
     epochs=20,
-    gpu=[0,1],
     training_store_root="../Model_storage"
 )
 

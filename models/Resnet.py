@@ -3,11 +3,6 @@ import torch.nn as nn
 from torch.autograd import Variable 
 import numpy as np
 
-try:
-    from torch.hub import load_state_dict_from_url
-except ImportError:
-    from torch.utils.model_zoo import load_url as load_state_dict_from_url
-
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -261,7 +256,7 @@ class Resnet_Student(nn.Module):
             norm_layer = nn.BatchNorm2d
         self._norm_layer = norm_layer
 
-        self.inplanes = 64
+        self.inplanes = 64 if block == BasicBlock else 256
         self.dilation = 1
         if replace_stride_with_dilation is None:
             # each element in the tuple indicates if we should replace
@@ -350,7 +345,9 @@ class BIO_Resnet(nn.Module):
                  norm_layer=None,
                  Base_freeze= False,
                  no_students = 4,
-                 no_blocks = 3,        # Select only from 3,2,1                 
+                 no_blocks = 3,             # Select only from 3,2,1
+                 parallel = False,
+                 gpus = [0,1]                         
                  ):
 
         super(BIO_Resnet, self).__init__()
@@ -365,7 +362,8 @@ class BIO_Resnet(nn.Module):
                                        groups=1, width_per_group=64, replace_stride_with_dilation=None,
                                        norm_layer=None,)
 
-        self.Base_Resnet = self.Base_Resnet.to(device)
+        self.Base_Resnet = self.Base_Resnet.to(device) if not parallel else torch.nn.DataParallel(self.Base_Resnet.to(device),
+                                                                                               device_ids =gpus)
 
         if Base_freeze:
             self.base_freezer()
@@ -383,14 +381,21 @@ class BIO_Resnet(nn.Module):
                                                       norm_layer=None,
                                                       depth_channels=depth_channels)
 
-            self.student_models.append(Student_M.to(device))
-
+        #self.student_models.append(Student_M.to(device))
+        
+            if not parallel:
+                self.student_models.append(Student_M.to(device))
+            else:
+                self.student_models.append(torch.nn.DataParallel(Student_M.to(device),device_ids=gpus))
+        
         # Initializing contribution weights for teacher output
 
         self.weights = Variable(torch.Tensor((float(1)/self.no_students)*np.ones([1,self.no_students,1])),
                                 requires_grad= True).to(device)
 
     def base_freezer(self):
+
+        print("----------- Freezing common base model")
 
         for m in self.Base_Resnet.parameters():
             if m.requires_grad:
@@ -424,13 +429,25 @@ class BIO_Resnet(nn.Module):
         return self._forward_impl(x)
 
 
-def pretrained_weight_formatter(Arch,progress):
+def pretrained_weight_formatter(Arch,parallel):
 
     base_weights = dict()
 
     if Arch == "Resnet18":
         Overall_model_dict = torch.load("../models/pretrained_weights/Resnet/resnet18.pth")
-    
+
+    elif Arch == "Resnet34":
+        Overall_model_dict = torch.load("../models/pretrained_weights/Resnet/resnet34.pth")
+
+    elif Arch == "Resnet50":
+        Overall_model_dict = torch.load("../models/pretrained_weights/Resnet/resnet50.pth")
+
+    elif Arch == "Resnet101":
+        Overall_model_dict = torch.load("../models/pretrained_weights/Resnet/resnet101.pth")
+
+    elif Arch == "Resnet152":
+        Overall_model_dict = torch.load("../models/pretrained_weights/Resnet/resnet152.pth")
+
     for key in Overall_model_dict.keys():
 
         K = True
@@ -439,23 +456,27 @@ def pretrained_weight_formatter(Arch,progress):
                 K = False
         
         if K:
-            base_weights[key] = Overall_model_dict[key]
+            if parallel:
+                base_weights["module."+key] = Overall_model_dict[key]
+            else:
+                base_weights[key] = Overall_model_dict[key]
 
     return base_weights
 
 
-def _BIO_Resnet(arch, block, layers, pretrained, progress,num_classes, **kwargs):
+def _BIO_Resnet(arch, block, layers, pretrained, progress,num_classes,parallel,Base_freeze, **kwargs):
 
-    model = BIO_Resnet(block, layers,num_classes=num_classes, **kwargs)
+    model = BIO_Resnet(block, layers,num_classes=num_classes,parallel=parallel,Base_freeze=Base_freeze, **kwargs)
 
     if pretrained:
-        state_dict = pretrained_weight_formatter(arch,progress)
+        state_dict = pretrained_weight_formatter(arch,parallel)
         model.Base_Resnet.load_state_dict(state_dict)
+        print("----------- ImageNet pretrained weights successfully loaded")
 
     return model
 
 
-def BIO_Resnet18(pretrained=False, progress=True,num_classes=1000, **kwargs):
+def BIO_Resnet18(pretrained=False, progress=True,num_classes=1000,parallel=False,Base_freeze=False, **kwargs):
     r"""BIO_Resnet-18 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -464,7 +485,7 @@ def BIO_Resnet18(pretrained=False, progress=True,num_classes=1000, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _BIO_Resnet('Resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
-                       num_classes=num_classes,**kwargs)
+                       num_classes=num_classes,parallel=parallel,Base_freeze=Base_freeze,**kwargs)
 
 
 def BIO_Resnet34(pretrained=False, progress=True, **kwargs):
