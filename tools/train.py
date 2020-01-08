@@ -33,6 +33,7 @@ def parser():
     return args
 
 def count_parameters(model):
+
     total = 0
     trainable = 0
     for param in model.parameters():
@@ -148,10 +149,6 @@ def trainer(configer,model,Train_loader,Val_loader):
 
             model,Epoch_Val_set_accuracy,Epoch_Val_set_loss,Epoch_Val_individual_loss = Val_epoch(configer,model,Val_loader,Current_cfg,i)           
 
-            print(Epoch_Val_set_accuracy)
-            print(Epoch_Val_set_loss)
-            print(Epoch_Val_individual_loss)
-
             for j in range(no_students+1):
                 Val_accuracies[j].append(Epoch_Val_set_accuracy[j])
                 Val_losses[j].append(Epoch_Val_set_loss[j])
@@ -162,14 +159,6 @@ def trainer(configer,model,Train_loader,Val_loader):
             if Epoch_Val_set_accuracy[0] > Best_Val_accuracy:
                 print("Best Validation accuracy found uptil now !! Saving model state....")
                 Best_Val_accuracy = Epoch_Val_set_accuracy[0]
-
-                print(Val_losses)
-                print(Val_ind_losses)
-                print(Val_accuracies)
-
-                print(Train_accuracies)
-                print(Train_ind_losses)
-                print(Train_losses)
 
                 Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
 
@@ -208,7 +197,7 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
 
     Total_count = 0
 
-    print('*' * 20, 'TRAINING', '*' * 20)
+    print('*' * 20, 'TRAINING EPOCH {}'.format(i+1), '*' * 20)
 
     start = time.time()
     model.train()
@@ -238,14 +227,15 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
 
         Total_count += len(Input)
 
-        print('Iter: {}/{} | Running loss:Overall : {:.3f}'
-               ' Individual : Normal: {:.3f} Intermmediate: {:.3f} KL:{:.3f} Student : {} | Time elapsed: {:.2f} mins '.format(batch_idx + 1, num_train_batches,
+        print('Iter: {}/{} | Running loss: Overall : {:.3f} '
+        ' Individual : Normal:{:.3f} Intermmediate:{:.3f} KL:{:.3f} Student : {} | Time elapsed: {:.2f} mins'.format(batch_idx + 1, num_train_batches,
                                 running_combined_loss/(batch_idx + 1),
                                 running_individual_losses[0]/(batch_idx + 1),
                                 running_individual_losses[1]/(batch_idx + 1),
                                 running_individual_losses[2]/(batch_idx + 1),
                                 list(running_student_losses/(batch_idx + 1)),
-                                (time.time() - start) / 60),end="\n",flush=True)
+                                (time.time() - start) / 60), end='\r',flush=True)
+        sys.stdout.flush()
 
         del Input, labels, outputs, Intermmediate_maps
 
@@ -253,11 +243,6 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
     Epoch_loss_list = [Epoch_avg_loss] + list(running_student_losses/num_train_batches)
     Epoch_accuracy = list((Total_correct/Total_count)*100)
     Epoch_individual_loss_list = list(running_individual_losses/num_train_batches)
-
-    print('\nTraining --> \nAccuracy: Teacher: {:.3f}\nStudents: {} |\nOverall Loss: {:.3f}'.format(Epoch_accuracy[0],
-                                                                                                        Epoch_accuracy[1:],
-                                                                                                        Epoch_avg_loss
-                                                                                                        ))
 
     return model,Epoch_accuracy,Epoch_loss_list,Epoch_individual_loss_list
 
@@ -289,7 +274,7 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
 
     Total_count = 0
 
-    print('*' * 20, 'VALIDATING', '*' * 20)
+    print('*' * 20, 'VALIDATING EPOCH {}'.format(i+1), '*' * 20)
 
     start = time.time()
     model.eval()
@@ -315,7 +300,7 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
             Total_count += len(Input)
 
             print('Iter: {}/{} | Running loss: Overall : {:.3f} '
-            ' Individual : Normal:{:.3f} Intermmediate:{:.3f} KL:{} Student : {:.3f} | Time elapsed: {:.2f} mins'.format(batch_idx + 1, num_train_batches,
+            ' Individual : Normal:{:.3f} Intermmediate:{:.3f} KL:{:.3f} Student : {} | Time elapsed: {:.2f} mins'.format(batch_idx + 1, num_train_batches,
                                     running_combined_loss/(batch_idx + 1),
                                     running_individual_losses[0]/(batch_idx + 1),
                                     running_individual_losses[1]/(batch_idx + 1),
