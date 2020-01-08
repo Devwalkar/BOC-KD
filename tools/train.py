@@ -358,11 +358,8 @@ def Model_State_Saver(model,
 
         shutil.copy('../'+args.cfg , os.path.join(Store_root,run_id,"Train_config.py"))
 
-    # Saving model state dict
-    if Current_cfg["DataParallel"]:
-        torch.save(model.module.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}.pth".format(i)))
-    else:
-        torch.save(model.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}.pth".format(i)))
+
+    torch.save(model.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}.pth".format(i)))
 
     # Saving Accuracy and loss arrays and Plotting Training and Validation plots
 
@@ -394,7 +391,6 @@ def main(args):
 
     # Building config DL model
     model = Model_builder(configer)
-    count_parameters(model)
 
     # Resuming training from saved checkpoint
     if configer.Train_resume:

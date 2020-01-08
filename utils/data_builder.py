@@ -25,8 +25,8 @@ def Dataset_Loader(configer):
 
         img_transform  = transforms.Compose([transforms.Resize((299,299)),transforms.ToTensor()])
 
-    elif Model in ["Densenet121","VGG_19","Resnet18","Resnet50","Resnet34",
-                        "Resnet101","Resnet152","ResNeXt101-32","ResNeXt101-64"]:
+    elif Model in ["Densenet121","VGG_19","Resnet18","Resnet50","Resnet34","Resnet32",
+                        "Resnet101","Resnet110","Resnet152","ResNeXt101-32","ResNeXt101-64"]:
  
         if Dataset_name == "Caltech":
             img_transform = transforms.Compose([
@@ -34,7 +34,9 @@ def Dataset_Loader(configer):
                             transforms.ToTensor(),
                             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
         else:
-            img_transform  = transforms.Compose([transforms.Resize((224,224)),transforms.ToTensor()]) 
+            img_transform  = transforms.Compose([transforms.Resize((224,224)),
+                                                 transforms.RandomHorizontalFlip(p=0.4),
+                                                 transforms.ToTensor()]) 
       
     elif Model in ["MobilenetV2"]:
 
@@ -176,5 +178,6 @@ def Dataset_Loader(configer):
                                 #pin_memory=True)
 
     print ('---------- Training and Test data Loaded ')
+    print("Dataset: {}".format(Dataset_name))
 
     return train_loader,test_loader

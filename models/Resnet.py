@@ -428,6 +428,37 @@ class BIO_Resnet(nn.Module):
     def forward(self, x):
         return self._forward_impl(x)
 
+def count_parameters(model):
+
+    total = 0
+    trainable = 0
+    for param in model.parameters():
+        temp = param.numel()
+        total += temp
+        if param.requires_grad:
+            trainable += temp
+
+    return (total,trainable)
+
+def parameter_model_counter(base_model,student_models):
+
+    # Function to count individual student model parameters
+
+    Base_model_count = count_parameters(base_model)
+    Student_model_count = [count_parameters(model) for model in student_models]
+
+    Original_model_params = Base_model_count[0]+Student_model_count[0][0]
+
+    Total_params,Total_trainable_params = Base_model_count[0],Base_model_count[1]
+    print("\nParameter count -->")
+    for i,stu_count in enumerate(Student_model_count):
+        print("Student {}: Total {} | Trainable: {} Compress_ratio: {:.4f}".format(i+1,Base_model_count[0]+stu_count[0],
+                                                                               Base_model_count[1]+stu_count[1],
+                                                            float(Base_model_count[0]+stu_count[0])/Original_model_params))
+        Total_params+=stu_count[0]
+        Total_trainable_params+=stu_count[1]
+    
+    print("Overall Teacher: Total: {} | Trainable: {}\n".format(Total_params,Total_trainable_params))
 
 def pretrained_weight_formatter(Arch,parallel):
 
@@ -468,6 +499,8 @@ def _BIO_Resnet(arch, block, layers, pretrained, progress,num_classes,parallel,B
 
     model = BIO_Resnet(block, layers,num_classes=num_classes,parallel=parallel,Base_freeze=Base_freeze, **kwargs)
 
+    parameter_model_counter(model.Base_Resnet,model.student_models)  
+
     if pretrained:
         state_dict = pretrained_weight_formatter(arch,parallel)
         model.Base_Resnet.load_state_dict(state_dict)
@@ -499,6 +532,16 @@ def BIO_Resnet34(pretrained=False, progress=True, **kwargs):
     return _BIO_Resnet('Resnet34', BasicBlock, [3, 4, 6, 3], pretrained, progress,
                    **kwargs)
 
+def BIO_Resnet32(pretrained=False, progress=True, **kwargs):
+    r"""BIO_Resnet-34 model from
+    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    return _BIO_Resnet('Resnet32', BasicBlock, [5, 5, 5, 5], pretrained, progress,
+                   **kwargs)
 
 def BIO_Resnet50(pretrained=False, progress=True, **kwargs):
     r"""BIO_Resnet-50 model from
@@ -523,6 +566,16 @@ def BIO_Resnet101(pretrained=False, progress=True, **kwargs):
     return _BIO_Resnet('Resnet101', Bottleneck, [3, 4, 23, 3], pretrained, progress,
                    **kwargs)
 
+def BIO_Resnet110(pretrained=False, progress=True, **kwargs):
+    r"""BIO_Resnet-101 model from
+    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    return _BIO_Resnet('Resnet110', Bottleneck, [18, 18, 18, 18], pretrained, progress,
+                   **kwargs)
 
 def BIO_Resnet152(pretrained=False, progress=True, **kwargs):
     r"""BIO_Resnet-152 model from

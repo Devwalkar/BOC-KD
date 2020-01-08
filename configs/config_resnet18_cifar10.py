@@ -4,19 +4,19 @@
 # DL model Architecture Settings
 
 '''
-Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet152"
+Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet152", "Resnet32", "Resnet110"
 
 '''
 model = dict(
-        name ="Resnet101",
+        name ="Resnet18",
         pretrained = False,            # Select between True and False
-        No_students = 4,              # Number of student models to create for training
+        No_students = 5,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
         DataParallel = True,          # Select between breaking single model onto
         Multi_GPU_replica = False,    # multiple GPUs or replicating model on 
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
-        gpu=[0,1,2,3,4],                  # For Resnet50(4 stu) recommended 2 GPUs, 
+        gpu=[0,1],                    # For Resnet50(4 stu) recommended 2 GPUs, 
                                       # For Resnet101(4 stu) 2 GPUs, Resnet152(5 stu) 3 GPUs
         )
 
@@ -51,9 +51,10 @@ dataset_cfg = dict(
 
 train_cfg = dict(
     optimizer=dict(
-        name='Adam',
-        lr=0.001,
-        weight_decay=1e-5
+        name='SGD',
+        lr=0.01,
+        weight_decay=1e-5,
+        momentum=0.9
     ),
     criterion=dict(
         L1='CrossEntropyLoss',    # Loss type for normal label loss 
@@ -70,7 +71,7 @@ train_cfg = dict(
     scheduler=dict(
         name='ReduceLROnPlateau',    # Select from LambdaLR, StepLR, MultiStepLR, 
                                      # ExponentialLR, ReduceLROnPlateau, CylicLR
-        patience=3,
+        patience=5,
         #step_size=15,
         #exp_gamma=0.1,
         verbose=True
@@ -79,7 +80,7 @@ train_cfg = dict(
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 1,
     plot_accuracy_graphs=True,
-    epochs=20,
+    epochs=300,
     training_store_root="../Model_storage"
 )
 

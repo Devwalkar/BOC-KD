@@ -32,6 +32,7 @@ def Model_builder(configer):
 
     model = model.to(device)
 
-    print ('---------- Model Loaded')
-    
+    print ('\n---------- Model Loaded')
+    print("Model Architecture: {}\n".format(model_name))
+
     return model
