@@ -190,7 +190,7 @@ def trainer(configer,model,Train_loader,Val_loader):
 
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
 
-                scheduler.step(Epoch_train_set_accuracy[0])
+                scheduler.step(Epoch_Val_set_accuracy[0])
 
     Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
 
@@ -211,6 +211,7 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
     Dataset = Current_cfg["Dataset"] 
     scheduler = Current_cfg["scheduler"]
     scheduler_name = Current_cfg["scheduler_name"]
+    Test_interval = Current_cfg["test_interval"]
 
     Best_pretrain_Val_accuracy = 0
     criterion = Total_loss(pretrain_mode=True,
@@ -298,8 +299,8 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
                 Best_pretrain_Val_accuracy = Val_accuracy
                 Model_State_Saver(model,Current_cfg=Current_cfg,i=i)
 
-        if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
-            scheduler.step(Val_accuracy)
+            if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
+                scheduler.step(Val_accuracy)
     
     print("\n------------ Pretraining Stage Completed\n")
     return model

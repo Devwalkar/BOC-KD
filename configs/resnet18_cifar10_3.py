@@ -12,7 +12,7 @@ model = dict(
         pretrained = False,           # Select between True and False
         No_students = 5,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
-        DataParallel = True,         # Select between breaking single model onto
+        DataParallel = False,         # Select between breaking single model onto
         Multi_GPU_replica = False,    # multiple GPUs or replicating model on 
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
@@ -36,12 +36,12 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=256,
+        batch_size=32,
         shuffle=True,
         num_workers=8
     ),
     val_cfg=dict(
-        batch_size=256,
+        batch_size=32,
         shuffle=False,
         num_workers=8
     )
@@ -70,20 +70,20 @@ train_cfg = dict(
     scheduler=dict(
         name='ReduceLROnPlateau',    # Select from LambdaLR, StepLR, MultiStepLR, 
                                      # ExponentialLR, ReduceLROnPlateau, CylicLR
-        patience=15,
-        factor=0.02,
+        patience=1,
+        factor=0.5,
         mode="max",
         #step_size=15,
         #exp_gamma=0.1,
         verbose=True
     ),
 
-    teacher_pretraining= False,
-    pretraining_epochs= 5,             # epochs for which to pretrain the teacher on
+    teacher_pretraining= True,
+    pretraining_epochs= 10,             # epochs for which to pretrain the teacher on
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
-    test_interval = 5,
+    test_interval = 10,
     plot_accuracy_graphs=True,
-    epochs=300,
+    epochs=200,
     training_store_root="../Model_storage"
 )
 
