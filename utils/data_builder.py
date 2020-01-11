@@ -4,7 +4,7 @@ import torch.utils.data as TD
 import torch
 import os 
 from .Caltech_loader import Caltech256
-from .ImageNet_dataloader import Loader 
+#from .ImageNet_dataloader import Loader 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -31,12 +31,12 @@ def Dataset_Loader(configer):
         if Dataset_name == "Caltech":
             img_transform = transforms.Compose([
                             transforms.Resize((224,224)),
-                            transforms.ToTensor(),
-                            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+                            transforms.ToTensor()])
+                            #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
         else:
             img_transform  = transforms.Compose([transforms.Resize((224,224)),
-                                                 transforms.RandomHorizontalFlip(p=0.4),
-                                                 transforms.ToTensor()]) 
+                                                 transforms.ToTensor()])
+                                                 #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]) 
       
     elif Model in ["MobilenetV2"]:
 
@@ -146,18 +146,6 @@ def Dataset_Loader(configer):
 
             Trainloader = Caltech256(os.path.join(Data_root,"Caltech"),train=True,transform=img_transform)
             Testloader = Caltech256(os.path.join(Data_root,"Caltech"),train=False,transform=img_transform)
-
-    elif Dataset_name == "ImageNet":
-
-        cuda_for_loader = True if device == "cuda" else False
-
-        train_loader = Loader(mode="train",batch_size= Train_configer['batch_size'],shuffle=True,num_workers=Train_configer['num_workers'],
-                              cuda=cuda_for_loader,path=os.path.join(Data_root,"ImageNet"))
-
-        test_loader = Loader(mode="val",batch_size= Train_configer['batch_size'],shuffle=False,num_workers=Train_configer['num_workers'],
-                              cuda=cuda_for_loader,path=os.path.join(Data_root,"ImageNet"))
-
-        return train_loader,test_loader
 
     else:
         raise ImportError("Dataset not supported")   

@@ -24,6 +24,8 @@ from utils.Model_builder import Model_builder
 from utils.Losses import Combined_Loss as Total_loss
 from utils.Accuracy_Saver_and_Plotter import saver_and_plotter
 
+import pretrainedmodels as PM
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def parser():
@@ -56,6 +58,7 @@ def trainer(configer,model,Train_loader,Val_loader):
 
     Train_cfg = configer.train_cfg
     Model_cfg = configer.model
+    No_students = Model_cfg["No_students"]
     Current_cfg = dict()
 
     # Prepare optimizer
@@ -63,14 +66,24 @@ def trainer(configer,model,Train_loader,Val_loader):
     optim_name = optim_cfg.pop('name')
     print('### SELECTED OPTIMIZER:', optim_name)
     optim_cls = getattr(optim, optim_name)
-    optimizer = optim_cls(model.parameters(), **optim_cfg)
+    
+    param_list = [{'params':model.BaseNet.parameters()}]
+    for i in range(No_students):
+        param_list.append({'params':model.student_models[i].parameters()})
+
+    optimizer_pretrain = optim_cls(param_list[:2], **optim_cfg)
+    optimizer = optim_cls(param_list, **optim_cfg)
+
     Current_cfg["Optimizer"] = optimizer
+    Current_cfg["Optimizer_pretrain"] = optimizer_pretrain
+    Current_cfg["No_students"] = No_students
 
     # Prepare loss function(s)
     loss_cfg = Train_cfg.pop('criterion')
-    L1_loss_name = loss_cfg.pop('L1')
+    L1_loss_name = loss_cfg['L1']
     L2_loss_name = loss_cfg.pop('L2')
     L3_loss_name = loss_cfg.pop('L3')
+    Current_cfg["L1"] = L1_loss_name
 
     no_students = Model_cfg["No_students"]
     no_blocks = Model_cfg["No_blocks"]
@@ -83,7 +96,8 @@ def trainer(configer,model,Train_loader,Val_loader):
 
     # Intializing overall loss computation
 
-    loss = Total_loss(Normal_loss_module = L1_loss_name,
+    loss = Total_loss(pretrain_mode=False,
+                 Normal_loss_module = L1_loss_name,
                  Intermmediate_loss_module = L3_loss_name,
                  no_students = no_students,
                  no_blocks = no_blocks,
@@ -107,18 +121,30 @@ def trainer(configer,model,Train_loader,Val_loader):
         scheduler = scheduler_cls(optimizer, **scheduler_cfg)
 
     Current_cfg["scheduler"] = scheduler
+    Current_cfg["scheduler_name"] = scheduler_name
 
     # Getting current run_id
 
     Current_cfg["Run_id"] = get_run_id()
     Current_cfg["Store_root"] = Train_cfg["training_store_root"]
     Current_cfg["DataParallel"] = configer.model["DataParallel"]
+    Current_cfg["Dataset"]  = configer.dataset_cfg['id_cfg']['name']
 
     # Loading Training configs 
 
     Epochs = Train_cfg["epochs"]
     Test_interval = Train_cfg["test_interval"]
     Current_cfg["Plot_Accuracy"] = Train_cfg["plot_accuracy_graphs"]
+    Current_cfg["pretrain_epochs"] = Train_cfg["pretraining_epochs"]
+    Current_cfg["test_interval"] = Test_interval
+
+    # Teacher pretraining stage
+
+    teacher_pretraining = Train_cfg["teacher_pretraining"]
+    if teacher_pretraining:
+        model.pretrain()
+        model = Model_Pretraining(Current_cfg,model,Train_loader,Val_loader)
+        model.student_version()
 
     # Setting accuracy and losses lists and constants
     Best_Val_accuracy = 0
@@ -167,6 +193,117 @@ def trainer(configer,model,Train_loader,Val_loader):
                 scheduler.step(Epoch_Val_set_loss[0])
 
     Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
+
+
+def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
+
+    def get_count(outputs, labels):
+        
+        #Number of correctly predicted labels for each student model.       
+        pred_labels = torch.argmax(outputs, dim=1)
+        count       = torch.sum(torch.eq(pred_labels, labels)).item()
+        return count
+
+    # Training data
+
+    Epochs = Current_cfg["pretrain_epochs"]
+    optimizer = Current_cfg['Optimizer_pretrain']
+    Dataset = Current_cfg["Dataset"] 
+    scheduler = Current_cfg["scheduler"]
+    scheduler_name = Current_cfg["scheduler_name"]
+    Test_interval = Current_cfg["test_interval"]
+
+    Best_pretrain_Val_accuracy = 0
+    criterion = Total_loss(pretrain_mode=True,
+                               Normal_loss_module = Current_cfg["L1"]        
+                )
+
+    print ('---------- Starting Teacher Model Pre-Training\n')
+    for i in range(Epochs):
+
+        print('\n','*' * 20, 'PRE-TRAINING EPOCH {}'.format(i+1), '*'* 20,"\n")
+
+        model.train()
+        start = time.time()
+
+        # Some useful constants
+        num_train_batches = len(Train_loader)
+        num_val_batches = len(Val_loader)
+        running_train_loss = 0
+        running_val_loss = 0
+        Total_train_correct = 0
+        Total_val_correct = 0
+        Total_train_count = 0
+        Total_val_count = 0
+
+        if (scheduler is not None) and (scheduler_name != 'ReduceLROnPlateau'):
+
+            scheduler.step()
+
+        for batch_idx, (Input, labels) in enumerate(Train_loader):
+
+            Input = Input.repeat(1,3,1,1) if Dataset in ["MNIST", "Fashion-MNIST"] else Input
+            Input = Input.float().to(device)
+            labels = labels.to(device)
+
+            Batch_output = model(Input)
+            Loss = criterion(Batch_output, labels)
+
+            optimizer.zero_grad()
+            Loss.backward()
+            optimizer.step()
+
+            running_train_loss +=Loss.item()
+            Total_train_correct += get_count(Batch_output,labels)
+            Total_train_count += len(Input)
+
+            print('Iter: {}/{} | Running loss: {:.3f} | Time elapsed: {:.2f}'
+                    ' mins'.format(batch_idx + 1, num_train_batches,
+                                    running_train_loss/(batch_idx + 1),
+                                    (time.time() - start) / 60), end='\r',
+                    flush=True)
+
+        print('\nTraining epoch results --> Accuracy: {:.3f}% | Overall Loss: {:.3f}'.format(float((Total_train_correct)/Total_train_count)*100,  
+                                                                                                            float(running_train_loss)/num_train_batches
+                                                                                                            ))
+            
+        if (i%Test_interval) == 0:
+            model.eval()
+            start = time.time()
+
+            print('\n','*' * 20, 'PRE-VALIDATING EPOCH {}'.format(i+1), '*'* 20,"\n")
+
+            for batch_idx, (Input, labels) in enumerate(Val_loader):
+                Input = Input.repeat(1,3,1,1) if Dataset in ["MNIST", "Fashion-MNIST"] else Input
+                Input = Input.float().to(device)
+                labels = labels.to(device)
+
+                Batch_output = model(Input)
+                Loss = criterion(Batch_output, labels)
+
+                running_val_loss +=Loss.item()
+                Total_val_correct += get_count(Batch_output,labels)
+                Total_val_count += len(Input)
+
+                print('Iter: {}/{} | Running loss: {:.3f} | Time elapsed: {:.2f}'
+                        ' mins'.format(batch_idx + 1, num_val_batches,
+                                        running_val_loss/(batch_idx + 1),
+                                        (time.time() - start) / 60), end='\r',
+                        flush=True)
+
+            Val_accuracy = (float(Total_val_correct)/Total_val_count)*100
+            print('\nValidation epoch results --> Accuracy: {:.3f}% | Overall Loss: {:.3f}'.format(Val_accuracy,  
+                                                                                                    float(running_val_loss)/num_val_batches
+                                                                                                    ))
+            if Val_accuracy > Best_pretrain_Val_accuracy:
+                Best_pretrain_Val_accuracy = Val_accuracy
+                Model_State_Saver(model,Current_cfg=Current_cfg,i=i)
+
+        if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
+            scheduler.step(float(running_val_loss)/num_val_batches)
+    
+    print("\n------------ Pretraining Stage Completed\n")
+    return model
 
 
 def Train_epoch(configer,model,Train_loader,Current_cfg,i):
@@ -219,9 +356,8 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
         running_individual_losses += np.asarray(criterion.Individual_loss)
 
         for j in range(No_students):
-            running_student_losses[j]+= Individual_normal_losses[j].item()
+            running_student_losses[j]+= Individual_normal_losses[j+1].item()
         
-
         Correct_batch = np.asarray(get_count(outputs, labels))
         Total_correct += Correct_batch
 
@@ -279,7 +415,8 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
 
     Total_count = 0
 
-    print('\n','*' * 20, 'VALIDATING EPOCH {}'.format(i+1), '*' * 20,"\n")
+    if i is not None:
+        print('\n','*' * 20, 'VALIDATING EPOCH {}'.format(i+1), '*' * 20,"\n")
 
     start = time.time()
     model.eval()
@@ -330,20 +467,20 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
 
 
 def Model_State_Saver(model,
-                      configer,
-                      Current_cfg,
-                      Train_accuracies,
-                      Train_losses,
-                      Train_ind_losses,
-                      Val_accuracies,
-                      Val_losses,
-                      Val_ind_losses,
-                      i
+                      configer = None,
+                      Current_cfg = None,
+                      Train_accuracies = None,
+                      Train_losses = None,
+                      Train_ind_losses = None,
+                      Val_accuracies = None,
+                      Val_losses = None,
+                      Val_ind_losses = None,
+                      i = None
                       ):
 
     Store_root = Current_cfg["Store_root"]
     run_id = Current_cfg["Run_id"]
-    No_students = configer.model["No_students"]
+    No_students = Current_cfg["No_students"]
     plot_accuracy = Current_cfg["Plot_Accuracy"]
 
     if not os.path.isdir(os.path.join(Store_root,run_id)):
@@ -358,8 +495,23 @@ def Model_State_Saver(model,
 
         shutil.copy('../'+args.cfg , os.path.join(Store_root,run_id,"Train_config.py"))
 
+        if configer is None:
+            if not os.path.isdir(os.path.join(Store_root,run_id,'Model_saved_states',"Pretraining")):
+                os.mkdir(os.path.join(Store_root,run_id,'Model_saved_states',"Pretraining"))
 
-    torch.save(model.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}.pth".format(i)))
+    if configer is None:
+
+        os.mkdir(os.path.join(Store_root,run_id,'Model_saved_states',"Pretraining","Epoch_{}".format(i+1)))
+        torch.save(model.BaseNet.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Pretraining","Epoch_{}".format(i+1),"BaseNet.pth"))
+        torch.save(model.student_models[0].state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Pretraining","Epoch_{}".format(i+1),"student_0.pth"))
+
+        return None
+
+    os.mkdir(os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1)))   
+    torch.save(model.BaseNet.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1),"BaseNet.pth"))
+    
+    for g in range(No_students):
+        torch.save(model.student_models[g].state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1),"student_{}.pth".format(g)))
 
     # Saving Accuracy and loss arrays and Plotting Training and Validation plots
 
@@ -393,40 +545,52 @@ def main(args):
     model = Model_builder(configer)
 
     # Resuming training from saved checkpoint
-    if configer.Train_resume:
+    if configer.Train_resume or configer.Validate_only:
 
         Store_root = configer.train_cfg["training_store_root"]
         Load_run_id = configer.Load_run_id
         Load_Epoch = configer.Load_Epoch
-
-        print("\n### Resuming training from config checkpoint ID {0} and Epoch {1}\n".format(Load_run_id,Load_Epoch))
-
-        checkpoint_weights = torch.load(os.path.join(Store_root,Load_run_id,"Model_saved_states","Epoch_{}.pth".format(Load_Epoch)))
-
-        if configer.model["DataParallel"]:
-            model.module.load_state_dict(checkpoint_weights)        
-        else:
-            model.load_state_dict(checkpoint_weights)  
-
-    elif configer.Validate_only:
-
-        Store_root = configer.train_cfg["training_store_root"]
-        Load_run_id = configer.Load_run_id
-        Load_Epoch = configer.Load_Epoch
+        No_students = configer.model["No_students"]
         model_name = configer.model["name"]
+        no_blocks = configer.model["No_blocks"]
+        Temp = configer.train_cfg["KL_loss_temperature"]
+        Contribution_ratios = configer.train_cfg["Loss_contribution"]
 
-        print("\n### Validating Model:{0} from config checkpoint ID {1} and Epoch {2}\n".format(model_name,Load_run_id,Load_Epoch))
+        Load_path = os.path.join(Store_root,Load_run_id,"Model_saved_states","Epoch_{}".format(Load_Epoch))
 
-        Train_cfg = configer.train_cfg
-        loss_cfg = Train_cfg['criterion']
-        loss_name = loss_cfg.pop('L1')
-        loss_cls = getattr(nn, loss_name)
-        loss = loss_cls(**loss_cfg)
-        Val_cfg = dict(Loss_criterion= loss)
+        model.BaseNet.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
+        for g in range(No_students):
+            model.student_models[g].load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
 
-        Val_epoch(configer,model,Val_loader,Val_cfg,0)      
+        print("\n###### Loaded checkpoint ID {} and Epoch {} successfully\n".format(Load_run_id,Load_Epoch))
 
-        return 0  
+        if configer.Train_resume:
+            print("\n### Resuming training from checkpoint")
+            trainer(configer,model,Train_loader,Val_loader)
+            return None
+
+        elif configer.Validate_only:
+
+            print("\n### Validating Model\n")
+
+            loss_cfg = configer.train_cfg["criterion"]
+
+            loss = Total_loss(pretrain_mode=False,
+                Normal_loss_module = loss_cfg["L1"],
+                Intermmediate_loss_module = loss_cfg["L3"],
+                no_students = No_students,
+                no_blocks = no_blocks,
+                T = Temp,
+                alpha = Contribution_ratios["alpha"],        
+                beta = Contribution_ratios["beta"],          
+                gamma = Contribution_ratios["gamma"]          
+                )
+
+            Val_cfg = dict(Loss_criterion= loss)
+
+            Val_epoch(configer,model,Val_loader,Val_cfg,None)      
+
+            return None  
 
     # Training the model for config settings
 

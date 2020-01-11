@@ -153,7 +153,7 @@ class Bottleneck(nn.Module):
 
         return out
 
-class Base_Resnet(nn.Module):
+class BaseNet(nn.Module):
 
     # Common base model for all the Student models built on top of this 
 
@@ -161,7 +161,7 @@ class Base_Resnet(nn.Module):
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
                  norm_layer=None):
 
-        super(Base_Resnet, self).__init__()
+        super(BaseNet, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         self._norm_layer = norm_layer
@@ -343,26 +343,35 @@ class BIO_Resnet(nn.Module):
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
                  norm_layer=None,
+                 mod=False,
                  Base_freeze= False,
                  no_students = 4,
                  no_blocks = 3,             # Select only from 3,2,1
                  parallel = False,
-                 gpus = [0,1]                         
+                 gpus = [0,1],                         
                  ):
 
         super(BIO_Resnet, self).__init__()
 
-        Depth_channels_list = depth_channel_computer(no_blocks=no_blocks,no_students=no_students)
+        if mod:
+            Depth_channels_list = depth_channel_computer(no_blocks=no_blocks,
+                                                         no_students=no_students,
+                                                         original_channels=[16,32,64])
+        else:
+            Depth_channels_list = depth_channel_computer(no_blocks=no_blocks,
+                                                         no_students=no_students)
+
         self.no_students = no_students
         self.no_blocks = no_blocks
+        self.pretrain_mode = False
 
         # Initializing the common base resent model
 
-        self.Base_Resnet = Base_Resnet(block=block,layers=layers, num_classes=num_classes, zero_init_residual=False,
+        self.BaseNet = BaseNet(block=block,layers=layers, num_classes=num_classes, zero_init_residual=False,
                                        groups=1, width_per_group=64, replace_stride_with_dilation=None,
                                        norm_layer=None,)
 
-        self.Base_Resnet = self.Base_Resnet.to(device) if not parallel else torch.nn.DataParallel(self.Base_Resnet.to(device),
+        self.BaseNet = self.BaseNet.to(device) if not parallel else torch.nn.DataParallel(self.BaseNet.to(device),
                                                                                                device_ids =gpus)
 
         if Base_freeze:
@@ -373,6 +382,7 @@ class BIO_Resnet(nn.Module):
         self.student_models = []
 
         for depth_channels in Depth_channels_list:
+
             Student_M = Resnet_Student(block=block,layers=layers, num_classes=num_classes, 
                                                       zero_init_residual=False,
                                                       groups=1, 
@@ -397,36 +407,57 @@ class BIO_Resnet(nn.Module):
 
         print("----------- Freezing common base model")
 
-        for m in self.Base_Resnet.parameters():
+        for m in self.BaseNet.parameters():
             if m.requires_grad:
                 m.requires_grad = False
+    
+    def pretrain(self):
+        self.pretrain_mode = True
 
-    def _forward_impl(self, x):
+    def student_version(self):
+        self.pretrain_mode = False
 
-        x = self.Base_Resnet(x)
+    def _forward_teacher_pretrain(self, x):
+
+        x = self.BaseNet(x)
+
+        Teacher_out,_ = self.student_models[0](x)         
+
+        return Teacher_out
+
+    def _forward_student(self, x):
+
+        x = self.BaseNet(x)
+
+        x_copy = Variable(x.clone(),requires_grad=False)
 
         Student_final_outs = []
         Student_intermmediate_reps = [[] for _ in range(self.no_blocks)]
 
         for i in range(self.no_students):
-            Final_out,Inter_reps = self.student_models[i](x)
-            Student_final_outs.append(Final_out)
             if i==0:
+                Final_out,Inter_reps = self.student_models[0](x)
                 Combined_student_outs = Final_out.unsqueeze(1)
             else:
-                Combined_student_outs = torch.cat((Combined_student_outs,Final_out.unsqueeze(1)),dim=1) # Combined_student_outs shape : (Batch_size, num_classes) 
+                Final_out,Inter_reps = self.student_models[i](x_copy)
+                Combined_student_outs = torch.cat((Combined_student_outs,Final_out.unsqueeze(1)),dim=1) # Combined_student_outs shape : (Batch_size,no_students,num_classes) 
 
+            Student_final_outs.append(Final_out)
+            
             for j in range(self.no_blocks):
                 Student_intermmediate_reps[j].append(Inter_reps[j])
 
-        Teacher_out = torch.sum(Combined_student_outs,dim=1).squeeze(1)               # Teacher out shape : (Batch_size, num_classes)
+        Teacher_out = torch.sum((self.weights*Combined_student_outs),dim=1).squeeze(1)               # Teacher out shape : (Batch_size, num_classes)
 
         Student_final_outs = [Teacher_out] + Student_final_outs           
 
         return Student_final_outs,Student_intermmediate_reps
 
     def forward(self, x):
-        return self._forward_impl(x)
+        if self.pretrain_mode:
+            return self._forward_teacher_pretrain(x)
+        else:
+            return self._forward_student(x)
 
 def count_parameters(model):
 
@@ -495,15 +526,15 @@ def pretrained_weight_formatter(Arch,parallel):
     return base_weights
 
 
-def _BIO_Resnet(arch, block, layers, pretrained, progress,num_classes,parallel,Base_freeze, **kwargs):
+def _BIO_Resnet(arch, block, layers, pretrained, progress,num_classes,parallel,Base_freeze,mod=False, **kwargs):
 
-    model = BIO_Resnet(block, layers,num_classes=num_classes,parallel=parallel,Base_freeze=Base_freeze, **kwargs)
+    model = BIO_Resnet(block, layers,num_classes=num_classes,parallel=parallel,Base_freeze=Base_freeze,mod=mod, **kwargs)
 
-    parameter_model_counter(model.Base_Resnet,model.student_models)  
+    parameter_model_counter(model.BaseNet,model.student_models)  
 
     if pretrained:
         state_dict = pretrained_weight_formatter(arch,parallel)
-        model.Base_Resnet.load_state_dict(state_dict)
+        model.BaseNet.load_state_dict(state_dict)
         print("----------- ImageNet pretrained weights successfully loaded")
 
     return model
@@ -540,7 +571,7 @@ def BIO_Resnet32(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _BIO_Resnet('Resnet32', BasicBlock, [5, 5, 5, 5], pretrained, progress,
+    return _BIO_Resnet('Resnet32', BasicBlock, [3, 3, 2, 3], pretrained, progress,mod=True,
                    **kwargs)
 
 def BIO_Resnet50(pretrained=False, progress=True, **kwargs):
@@ -574,7 +605,7 @@ def BIO_Resnet110(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _BIO_Resnet('Resnet110', Bottleneck, [18, 18, 18, 18], pretrained, progress,
+    return _BIO_Resnet('Resnet110', Bottleneck, [6, 8, 46, 6], pretrained, progress,mod=True,
                    **kwargs)
 
 def BIO_Resnet152(pretrained=False, progress=True, **kwargs):

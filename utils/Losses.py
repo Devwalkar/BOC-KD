@@ -36,7 +36,7 @@ class Intermmediate_loss(nn.Module):
 
     def __init__(self, no_students = 4,
                        no_blocks = 3, 
-                       Loss_module = 'MSE'
+                       Loss_module = 'MSELoss'
                 ):
 
         # Intermmediate loss module for blockwise representation comparision of pseudo teacher with students
@@ -70,6 +70,7 @@ class Intermmediate_loss(nn.Module):
 class Normal_Loss(nn.Module):
 
     def __init__(self,
+                 pretrain_mode = False,
                  loss_module = "CrossEntropyLoss"
                  ):
 
@@ -78,18 +79,21 @@ class Normal_Loss(nn.Module):
         super(Normal_Loss,self).__init__()
 
         self.loss_module = getattr(nn,loss_module)()
+        self.pretrain = pretrain_mode
 
     def forward(self,preds,labels):
 
-        # preds shape            :  [preds of teacher model, preds of Student model 1]
-        # individual preds shape :  (batch_size, no_classes)
-        # Labels shape           :  (Batch_size, no_classes)
+        # preds shape (if not pretrain)   :  [preds of teacher model, preds of Student model 1]
+        # individual preds shape          :  (batch_size, no_classes)
+        # Labels shape                    :  (Batch_size, no_classes)
 
-        Total_loss = []
-
-        for model_pred in preds:
-
-                Total_loss.append(self.loss_module(model_pred,labels))
+        if self.pretrain:
+            Total_loss = self.loss_module(preds,labels)
+        
+        else:
+            Total_loss = []
+            for model_pred in preds:
+                    Total_loss.append(self.loss_module(model_pred,labels))
 
         return Total_loss
 
@@ -97,8 +101,9 @@ class Normal_Loss(nn.Module):
 class Combined_Loss(nn.Module):
 
     def __init__(self,
+                 pretrain_mode = False,
                  Normal_loss_module = "CrossEntropyLoss",
-                 Intermmediate_loss_module = "MSE",
+                 Intermmediate_loss_module = "MSELoss",
                  no_students = 4,
                  no_blocks = 3,
                  T = 3,
@@ -111,17 +116,32 @@ class Combined_Loss(nn.Module):
 
         super(Combined_Loss,self).__init__()
 
-        self.Normal_Loss = Normal_Loss(loss_module=Normal_loss_module)
+        self.Normal_Loss = Normal_Loss(pretrain_mode=pretrain_mode, loss_module=Normal_loss_module)
         self.Intermmediate_loss = Intermmediate_loss(no_students=no_students,
                                                      no_blocks= no_blocks,
                                                      Loss_module=Intermmediate_loss_module
                                                      )
         self.KL_Loss = KL_Loss(T=T) 
         self.contri_params = [alpha,beta,gamma]
-        self.Individual_loss = []                                           
+        self.Individual_loss = []   
+
+        if pretrain_mode:
+            self.forward = self.teacher_forward
+        else:
+            self.forward = self.student_forward                                      
 
 
-    def forward(self,preds,labels,intermmediate_maps):
+    def teacher_forward(self,preds,labels):
+
+        # preds shape              : (Batch_size, no_classes)
+        # Labels shape             : (Batch_size, no_classes)
+
+        # Normal loss computation 
+
+        return self.Normal_Loss(preds,labels)
+
+
+    def student_forward(self,preds,labels,intermmediate_maps):
 
         # preds shape              : [preds of teacher model, preds of Student model 1]
         # individual preds shape   : (batch_size, no_classes)

@@ -166,7 +166,7 @@ class Loader(object):
         ds = td.LMDBData(lmdb_loc, shuffle=False)
         ds = td.LocallyShuffleData(ds, cache)
         ds = td.PrefetchData(ds, 5000, 1)
-        ds = td.LMDBDataPoint(ds)
+        ds = td.LMDBSerializer.load(ds)
         ds = td.MapDataComponent(ds, lambda x: cv2.imdecode(x, cv2.IMREAD_COLOR), 0)
         ds = td.AugmentImageComponent(ds, imagenet_augmentors)
         ds = td.PrefetchDataZMQ(ds, num_workers)
