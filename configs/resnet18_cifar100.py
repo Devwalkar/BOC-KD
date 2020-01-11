@@ -31,17 +31,17 @@ Choose dataset from "MNIST", "CIFAR10", "CIFAR100", "Fashion-MNIST"
 dataset_cfg = dict(
     id_cfg=dict(
         root= "../data",
-        name= "CIFAR10",
-        num_classes= 10,
+        name= "CIFAR100",
+        num_classes= 100,
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=256,
+        batch_size=32,
         shuffle=True,
         num_workers=8
     ),
     val_cfg=dict(
-        batch_size=256,
+        batch_size=32,
         shuffle=False,
         num_workers=8
     )
@@ -78,12 +78,12 @@ train_cfg = dict(
         verbose=True
     ),
 
-    teacher_pretraining= False,
-    pretraining_epochs= 5,             # epochs for which to pretrain the teacher on
+    teacher_pretraining= True,
+    pretraining_epochs= 5,             # epochs for which to pretrain the pseudo teacher on
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
-    test_interval = 5,
+    test_interval = 1,
     plot_accuracy_graphs=True,
-    epochs=300,
+    epochs=200,
     training_store_root="../Model_storage"
 )
 

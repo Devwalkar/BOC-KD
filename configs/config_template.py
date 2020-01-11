@@ -70,14 +70,16 @@ train_cfg = dict(
     scheduler=dict(
         name='ReduceLROnPlateau',    # Select from LambdaLR, StepLR, MultiStepLR, 
                                      # ExponentialLR, ReduceLROnPlateau, CylicLR
-        patience=3,
+        patience=20,
+        factor=0.02,
+        mode="max",
         #step_size=15,
         #exp_gamma=0.1,
         verbose=True
     ),
 
     teacher_pretraining= True,
-    pretraining_epochs= 10,             # epochs for which to pretrain the teacher on
+    pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 1,
     plot_accuracy_graphs=True,

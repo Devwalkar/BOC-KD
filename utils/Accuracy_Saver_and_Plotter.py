@@ -11,7 +11,8 @@ def saver_and_plotter(Train_accuracies,
 			Store_root,
 			run_id,
 			No_students,
-			plot_accuracy
+			plot_accuracy,
+			Test_interval
 			):
 
 	# Saver function for training and validation accuracy/loss arrays and
@@ -45,10 +46,9 @@ def saver_and_plotter(Train_accuracies,
 			train_loss = np.asarray(train_loss)
 			Val_loss = np.asarray(Val_loss)
 
-			assert len(train_loss) == len(Val_loss), "Loss arrays don't match !"
 			Epochs = len(train_loss)
 			A, = plt.plot(np.arange(1,Epochs+1,1),train_loss)
-			B, = plt.plot(np.arange(1,Epochs+1,1),Val_loss)
+			B, = plt.plot(np.arange(1,Epochs+1,Test_interval),Val_loss)
 			plt.xlabel("Number of Epochs")
 			plt.ylabel("Epoch Loss")
 			plt.legend(["Training set loss","Validation Set loss"])
@@ -56,10 +56,9 @@ def saver_and_plotter(Train_accuracies,
 			plt.savefig(os.path.join(Store_root,run_id,"Plots","Loss_comparision_{}.png".format(loss_name)))
 			plt.clf()
 
-			assert len(train_accuracy) == len(Val_accuracy), "Accuracy arrays don't match !"
 			Epochs = len(train_accuracy)
 			A, = plt.plot(np.arange(1,Epochs+1,1),train_accuracy)
-			B, = plt.plot(np.arange(1,Epochs+1,1),Val_accuracy)
+			B, = plt.plot(np.arange(1,Epochs+1,Test_interval),Val_accuracy)
 			plt.xlabel("Number of Epochs")
 			plt.ylabel("Percent Accuracy")
 			plt.legend(["Training set Accuracy","Validation Set Accuracy"])
@@ -87,10 +86,9 @@ def saver_and_plotter(Train_accuracies,
 			train_loss = np.asarray(train_loss)
 			Val_loss = np.asarray(Val_loss)
 
-			assert len(train_loss) == len(Val_loss), "Loss arrays don't match !"
 			Epochs = len(train_loss)
 			A, = plt.plot(np.arange(1,Epochs+1,1),train_loss)
-			B, = plt.plot(np.arange(1,Epochs+1,1),Val_loss)
+			B, = plt.plot(np.arange(1,Epochs+1,Test_interval),Val_loss)
 			plt.xlabel("Number of Epochs")
 			plt.ylabel("Epoch Loss")
 			plt.legend(["Training set loss","Validation Set loss"])

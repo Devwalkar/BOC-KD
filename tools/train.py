@@ -190,7 +190,7 @@ def trainer(configer,model,Train_loader,Val_loader):
 
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
 
-                scheduler.step(Epoch_Val_set_loss[0])
+                scheduler.step(Epoch_train_set_accuracy[0])
 
     Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
 
@@ -211,14 +211,13 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
     Dataset = Current_cfg["Dataset"] 
     scheduler = Current_cfg["scheduler"]
     scheduler_name = Current_cfg["scheduler_name"]
-    Test_interval = Current_cfg["test_interval"]
 
     Best_pretrain_Val_accuracy = 0
     criterion = Total_loss(pretrain_mode=True,
                                Normal_loss_module = Current_cfg["L1"]        
                 )
 
-    print ('---------- Starting Teacher Model Pre-Training\n')
+    print ('---------- Starting Psuedo Teacher Model Pre-Training\n')
     for i in range(Epochs):
 
         print('\n','*' * 20, 'PRE-TRAINING EPOCH {}'.format(i+1), '*'* 20,"\n")
@@ -300,7 +299,7 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
                 Model_State_Saver(model,Current_cfg=Current_cfg,i=i)
 
         if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
-            scheduler.step(float(running_val_loss)/num_val_batches)
+            scheduler.step(Val_accuracy)
     
     print("\n------------ Pretraining Stage Completed\n")
     return model
@@ -482,6 +481,7 @@ def Model_State_Saver(model,
     run_id = Current_cfg["Run_id"]
     No_students = Current_cfg["No_students"]
     plot_accuracy = Current_cfg["Plot_Accuracy"]
+    Test_interval = Current_cfg["test_interval"]
 
     if not os.path.isdir(os.path.join(Store_root,run_id)):
         os.mkdir(os.path.join(Store_root,run_id))
@@ -524,7 +524,8 @@ def Model_State_Saver(model,
 			Store_root = Store_root,
 			run_id = run_id,
 			No_students = No_students,
-            plot_accuracy = plot_accuracy
+            plot_accuracy = plot_accuracy,
+            Test_interval = Test_interval
 			)
 
 
