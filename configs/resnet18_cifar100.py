@@ -31,8 +31,8 @@ Choose dataset from "MNIST", "CIFAR10", "CIFAR100", "Fashion-MNIST"
 dataset_cfg = dict(
     id_cfg=dict(
         root= "../data",
-        name= "CIFAR10",
-        num_classes= 10,
+        name= "CIFAR100",
+        num_classes= 100,
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(

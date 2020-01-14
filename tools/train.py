@@ -329,6 +329,7 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
     num_train_batches = len(Train_loader)
     running_combined_loss = 0
     running_student_losses = np.zeros(No_students)
+    running_teacher_losses = 0
     running_individual_losses = np.zeros(3)
     Total_correct = np.zeros(No_students+1)
 
@@ -357,12 +358,13 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
 
         for j in range(No_students):
             running_student_losses[j]+= Individual_normal_losses[j+1].item()
-        
+
+        running_teacher_losses += Individual_normal_losses[0].item()       
         Correct_batch = np.asarray(get_count(outputs, labels))
         Total_correct += Correct_batch
 
         Total_count += len(Input)
-
+        '''
         print('Iter: {}/{} | Running loss: Overall : {:.3f} '
         ' Individual : Normal:{:.3f} Intermmediate:{:.3f} KL:{:.3f} Student : {} | Time elapsed: {:.2f} mins'.format(batch_idx + 1, num_train_batches,
                                 running_combined_loss/(batch_idx + 1),
@@ -370,6 +372,17 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
                                 running_individual_losses[1]/(batch_idx + 1),
                                 running_individual_losses[2]/(batch_idx + 1),
                                 list(running_student_losses/(batch_idx + 1)),
+                                (time.time() - start) / 60), end='\r',flush=True)
+        sys.stdout.flush()
+        '''
+
+        print('Iter: {}/{} | Running loss: Overall : {:.3f} '
+        ' Individual : Normal:{:.3f} Intermmediate:{:.3f} KL:{:.3f} Teacher : {:.3f} | Time elapsed: {:.2f} mins'.format(batch_idx + 1, num_train_batches,
+                                running_combined_loss/(batch_idx + 1),
+                                running_individual_losses[0]/(batch_idx + 1),
+                                running_individual_losses[1]/(batch_idx + 1),
+                                running_individual_losses[2]/(batch_idx + 1),
+                                running_teacher_losses/(batch_idx + 1),
                                 (time.time() - start) / 60), end='\r',flush=True)
         sys.stdout.flush()
 
@@ -410,6 +423,7 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
     num_train_batches = len(Val_loader)
     running_combined_loss = 0
     running_student_losses = np.zeros(No_students)
+    running_teacher_losses = 0
     running_individual_losses = np.zeros(3)
     Total_correct = np.zeros(No_students+1)
 
@@ -434,7 +448,9 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
             running_individual_losses += np.asarray(criterion.Individual_loss)
 
             for j in range(No_students):
-                running_student_losses[j]+= Individual_normal_losses[j].item()
+                running_student_losses[j]+= Individual_normal_losses[j+1].item()
+
+            running_teacher_losses += Individual_normal_losses[0].item()
 
             Correct_batch = np.asarray(get_count(outputs, labels))
             Total_correct += Correct_batch
@@ -442,12 +458,12 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
             Total_count += len(Input)
 
             print('Iter: {}/{} | Running loss: Overall : {:.3f} '
-            ' Individual : Normal:{:.3f} Intermmediate:{:.3f} KL:{:.3f} Student : {} | Time elapsed: {:.2f} mins'.format(batch_idx + 1, num_train_batches,
+            ' Individual: Normal: {:.3f} Intermmediate: {:.3f} KL: {:.3f} Teacher: {:.3f} | Time elapsed: {:.2f} mins'.format(batch_idx + 1, num_train_batches,
                                     running_combined_loss/(batch_idx + 1),
                                     running_individual_losses[0]/(batch_idx + 1),
                                     running_individual_losses[1]/(batch_idx + 1),
                                     running_individual_losses[2]/(batch_idx + 1),
-                                    list(running_student_losses/(batch_idx + 1)),
+                                    running_teacher_losses/(batch_idx + 1),
                                     (time.time() - start) / 60), end='\r',flush=True)
             sys.stdout.flush()
 

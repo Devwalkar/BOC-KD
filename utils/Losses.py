@@ -25,7 +25,7 @@ class KL_Loss(nn.Module):
         student_pred = F.log_softmax(student_pred/self.T,dim=1)
         teacher_pred = F.softmax(teacher_pred/self.T,dim=1)
 
-        teacher_pred = teacher_pred + 10**(-7)
+        #teacher_pred = teacher_pred + 10**(-7)
         teacher_pred = Variable(teacher_pred.data.to(device),requires_grad=False)
         KL_loss = (self.T**2) * ((teacher_pred*(teacher_pred.log()-student_pred)).sum(1).sum()/teacher_pred.size()[0])
 
@@ -156,13 +156,15 @@ class Combined_Loss(nn.Module):
 
         Individual_normal_losses = self.Normal_Loss(preds,labels)
 
-        Loss_A = self.contri_params[0]*sum(Individual_normal_losses)
+        #Loss_A = self.contri_params[0]*sum(Individual_normal_losses)
+        Loss_A = sum(Individual_normal_losses)
         self.Individual_loss.append(Loss_A.item())
         Combined_loss += Loss_A
 
         # Intermmediate loss computation 
 
-        Loss_B = self.contri_params[1]*self.Intermmediate_loss(intermmediate_maps)
+        #Loss_B = self.contri_params[1]*self.Intermmediate_loss(intermmediate_maps)
+        Loss_B = self.Intermmediate_loss(intermmediate_maps)
         self.Individual_loss.append(Loss_B.item())
         Combined_loss += Loss_B
 
@@ -173,7 +175,8 @@ class Combined_Loss(nn.Module):
 
         for i in range(1,len(preds)):
             Student_pred = preds[i]
-            Loss_C += self.contri_params[2]*self.KL_Loss(teacher_pred,Student_pred)
+            #Loss_C += self.contri_params[2]*self.KL_Loss(teacher_pred,Student_pred)
+            Loss_C += self.KL_Loss(teacher_pred,Student_pred)
 
         Combined_loss +=Loss_C
         self.Individual_loss.append(Loss_C.item())
