@@ -8,7 +8,7 @@ args = parser.parse_args()
 
 Overall_path = os.path.join("../Model_storage",str(args.run_id),"Accuracy_arrays/Validation")
 
-Valid_accuracy_arrays_names = [x for x in os.listdir(Overall_path) if "Valid_Accuracies_for_Student" in x]
+Valid_accuracy_arrays_names = sorted([x for x in os.listdir(Overall_path) if "Valid_Accuracies_for_Student" in x])
 
 print("------------ Evaluating the best validation accuracies for each student model")
 

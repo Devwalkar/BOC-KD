@@ -3,8 +3,7 @@ import torchvision.transforms as transforms
 import torch.utils.data as TD 
 import torch
 import os 
-from .Caltech_loader import Caltech256
-#from .ImageNet_dataloader import Loader 
+from .Caltech_loader import Caltech256 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 

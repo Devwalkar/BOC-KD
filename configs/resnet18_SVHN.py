@@ -8,7 +8,7 @@ Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet15
 
 '''
 model = dict(
-        name ="Resnet110",
+        name ="Resnet18",
         pretrained = False,           # Select between True and False
         No_students = 5,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
@@ -31,17 +31,17 @@ Choose dataset from "MNIST", "CIFAR10", "CIFAR100", "Fashion-MNIST"
 dataset_cfg = dict(
     id_cfg=dict(
         root= "../data",
-        name= "CIFAR10",
+        name= "SVHN",
         num_classes= 10,
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=32,
+        batch_size=64,
         shuffle=True,
-        num_workers=20
+        num_workers=8
     ),
     val_cfg=dict(
-        batch_size=32,
+        batch_size=128,
         shuffle=False,
         num_workers=8
     )
@@ -63,8 +63,8 @@ train_cfg = dict(
 
     Loss_contribution=dict(
         alpha = 0.4,              # Contribution ratio for Normal label loss
-        beta = 0.2,               # Contribution ratio for Intermmediate loss
-        gamma = 0.4               # Contribution ratio for KL Loss 
+        beta = 0.3,               # Contribution ratio for Intermmediate loss
+        gamma = 0.3               # Contribution ratio for KL Loss 
     ),
 
     scheduler=dict(
@@ -78,12 +78,12 @@ train_cfg = dict(
         verbose=True
     ),
 
-    teacher_pretraining= False,
-    pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on
+    teacher_pretraining= True,
+    pretraining_epochs= 10,             # epochs for which to pretrain the teacher on
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
-    epochs=200,
+    epochs=300,
     training_store_root="../Model_storage"
 )
 
@@ -91,8 +91,8 @@ train_cfg = dict(
 # Training Resume settings
 # Select from either resuming training or validating model on test set 
 
-Train_resume = False
+Train_resume = False                   # Plase keep pretraining False if resuming or validating
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_03_23_49'
-Load_Epoch = 3
+Load_run_id = '01_10_20_47'
+Load_Epoch = 2

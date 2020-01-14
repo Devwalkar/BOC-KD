@@ -183,10 +183,11 @@ def trainer(configer,model,Train_loader,Val_loader):
                 Val_ind_losses[k].append(Epoch_Val_individual_loss[k])
 
             if Epoch_Val_set_accuracy[0] > Best_Val_accuracy:
-                print("Best Validation accuracy found uptil now !! Saving model state....")
+                print("Best Validation accuracy found uptil now !!")
                 Best_Val_accuracy = Epoch_Val_set_accuracy[0]
 
-                Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
+            print("----- Saving model state")
+            Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
 
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
 
@@ -364,17 +365,6 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
         Total_correct += Correct_batch
 
         Total_count += len(Input)
-        '''
-        print('Iter: {}/{} | Running loss: Overall : {:.3f} '
-        ' Individual : Normal:{:.3f} Intermmediate:{:.3f} KL:{:.3f} Student : {} | Time elapsed: {:.2f} mins'.format(batch_idx + 1, num_train_batches,
-                                running_combined_loss/(batch_idx + 1),
-                                running_individual_losses[0]/(batch_idx + 1),
-                                running_individual_losses[1]/(batch_idx + 1),
-                                running_individual_losses[2]/(batch_idx + 1),
-                                list(running_student_losses/(batch_idx + 1)),
-                                (time.time() - start) / 60), end='\r',flush=True)
-        sys.stdout.flush()
-        '''
 
         print('Iter: {}/{} | Running loss: Overall : {:.3f} '
         ' Individual : Normal:{:.3f} Intermmediate:{:.3f} KL:{:.3f} Teacher : {:.3f} | Time elapsed: {:.2f} mins'.format(batch_idx + 1, num_train_batches,
