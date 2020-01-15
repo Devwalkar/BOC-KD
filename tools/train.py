@@ -88,7 +88,6 @@ def trainer(configer,model,Train_loader,Val_loader):
     no_students = Model_cfg["No_students"]
     no_blocks = Model_cfg["No_blocks"]
     Temp = Train_cfg["KL_loss_temperature"]
-    Contribution_ratios = Train_cfg["Loss_contribution"]
 
     assert L2_loss_name == "KL_Loss", "Only KL loss is supported for probability distribution comparision"
 
@@ -101,10 +100,7 @@ def trainer(configer,model,Train_loader,Val_loader):
                  Intermmediate_loss_module = L3_loss_name,
                  no_students = no_students,
                  no_blocks = no_blocks,
-                 T = Temp,
-                 alpha = Contribution_ratios["alpha"],        
-                 beta = Contribution_ratios["beta"],          
-                 gamma = Contribution_ratios["gamma"]          
+                 T = Temp         
                  )
 
     Current_cfg["Loss_criterion"] = loss
@@ -123,9 +119,15 @@ def trainer(configer,model,Train_loader,Val_loader):
     Current_cfg["scheduler"] = scheduler
     Current_cfg["scheduler_name"] = scheduler_name
 
+    # Resume training configs
+    Resume = configer.Train_resume
+    Load_run_id = configer.Load_run_id
+    Load_epoch = configer.Load_Epoch
+    Current_cfg["Resume"] = Resume
+
     # Getting current run_id
 
-    Current_cfg["Run_id"] = get_run_id()
+    Current_cfg["Run_id"] = Load_run_id if Resume else get_run_id() 
     Current_cfg["Store_root"] = Train_cfg["training_store_root"]
     Current_cfg["DataParallel"] = configer.model["DataParallel"]
     Current_cfg["Dataset"]  = configer.dataset_cfg['id_cfg']['name']
@@ -155,8 +157,14 @@ def trainer(configer,model,Train_loader,Val_loader):
     Val_losses = [[] for i in range(no_students+1)]
     Val_ind_losses = [[] for i in range(3)]
 
-    print ('---------- Starting Training')
-    for i in range(Epochs):
+    if Resume:
+        print ('---------- Resuming Training')
+        start_epoch = Load_epoch  
+    else:     
+        print ('---------- Starting Training')
+        start_epoch =  0
+
+    for i in range(start_epoch,start_epoch+Epochs):
 
         if (scheduler is not None) and (scheduler_name != 'ReduceLROnPlateau'):
 
@@ -489,6 +497,7 @@ def Model_State_Saver(model,
     No_students = Current_cfg["No_students"]
     plot_accuracy = Current_cfg["Plot_Accuracy"]
     Test_interval = Current_cfg["test_interval"]
+    Resume = Current_cfg["Resume"]
 
     if not os.path.isdir(os.path.join(Store_root,run_id)):
         os.mkdir(os.path.join(Store_root,run_id))
@@ -514,11 +523,21 @@ def Model_State_Saver(model,
 
         return None
 
-    os.mkdir(os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1)))   
-    torch.save(model.BaseNet.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1),"BaseNet.pth"))
-    
-    for g in range(No_students):
-        torch.save(model.student_models[g].state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1),"student_{}.pth".format(g)))
+    os.mkdir(os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1))) 
+    if Resume:
+        shutil.copy('../'+args.cfg , os.path.join(Store_root,run_id,"Train_config_resume.py"))
+
+    DataParallel = configer.model["DataParallel"]
+
+    if DataParallel:
+        torch.save(model.BaseNet.module.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1),"BaseNet.pth"))    
+        for g in range(No_students):
+            torch.save(model.student_models[g].module.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1),"student_{}.pth".format(g)))
+
+    else:
+        torch.save(model.BaseNet.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1),"BaseNet.pth"))    
+        for g in range(No_students):
+            torch.save(model.student_models[g].state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1),"student_{}.pth".format(g)))
 
     # Saving Accuracy and loss arrays and Plotting Training and Validation plots
 
@@ -562,13 +581,18 @@ def main(args):
         model_name = configer.model["name"]
         no_blocks = configer.model["No_blocks"]
         Temp = configer.train_cfg["KL_loss_temperature"]
-        Contribution_ratios = configer.train_cfg["Loss_contribution"]
+        DataParallel = configer.model["DataParallel"]
 
         Load_path = os.path.join(Store_root,Load_run_id,"Model_saved_states","Epoch_{}".format(Load_Epoch))
 
-        model.BaseNet.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
-        for g in range(No_students):
-            model.student_models[g].load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
+        if DataParallel:
+            model.BaseNet.module.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
+            for g in range(No_students):
+                model.student_models[g].module.load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
+        else:
+            model.BaseNet.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
+            for g in range(No_students):
+                model.student_models[g].load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
 
         print("\n###### Loaded checkpoint ID {} and Epoch {} successfully\n".format(Load_run_id,Load_Epoch))
 
@@ -588,10 +612,7 @@ def main(args):
                 Intermmediate_loss_module = loss_cfg["L3"],
                 no_students = No_students,
                 no_blocks = no_blocks,
-                T = Temp,
-                alpha = Contribution_ratios["alpha"],        
-                beta = Contribution_ratios["beta"],          
-                gamma = Contribution_ratios["gamma"]          
+                T = Temp         
                 )
 
             Val_cfg = dict(Loss_criterion= loss)

@@ -80,7 +80,7 @@ train_cfg = dict(
 
     teacher_pretraining= True,
     pretraining_epochs= 10,             # epochs for which to pretrain the teacher on
-    KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
+    KL_loss_temperature = 5,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
     epochs=300,

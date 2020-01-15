@@ -61,12 +61,6 @@ train_cfg = dict(
         L3="MSELoss"              # Loss type for Intermmediate representation loss
     ),
 
-    Loss_contribution=dict(
-        alpha = 0.4,              # Contribution ratio for Normal label loss
-        beta = 0.3,               # Contribution ratio for Intermmediate loss
-        gamma = 0.3               # Contribution ratio for KL Loss 
-    ),
-
     scheduler=dict(
         name='ReduceLROnPlateau',    # Select from LambdaLR, StepLR, MultiStepLR, 
                                      # ExponentialLR, ReduceLROnPlateau, CylicLR
@@ -94,5 +88,5 @@ train_cfg = dict(
 Train_resume = False
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_03_23_49'
-Load_Epoch = 3
+Load_run_id = '01_13_13_16'
+Load_Epoch = 181

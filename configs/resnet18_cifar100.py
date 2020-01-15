@@ -52,7 +52,7 @@ dataset_cfg = dict(
 train_cfg = dict(
     optimizer=dict(
         name='Adam',
-        lr=0.001,
+        lr=0.0001,
         weight_decay=1e-5
     ),
     criterion=dict(
@@ -78,12 +78,12 @@ train_cfg = dict(
         verbose=True
     ),
 
-    teacher_pretraining= True,
+    teacher_pretraining= False,
     pretraining_epochs= 10,             # epochs for which to pretrain the teacher on
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
-    epochs=300,
+    epochs=125,
     training_store_root="../Model_storage"
 )
 
@@ -91,8 +91,8 @@ train_cfg = dict(
 # Training Resume settings
 # Select from either resuming training or validating model on test set 
 
-Train_resume = False                   # Plase keep pretraining False if resuming or validating
+Train_resume = True                   # Plase keep pretraining False if resuming or validating
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_10_20_47'
-Load_Epoch = 2
+Load_run_id = '01_14_00_05'
+Load_Epoch = 131
