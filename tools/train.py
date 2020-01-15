@@ -58,6 +58,7 @@ def trainer(configer,model,Train_loader,Val_loader):
 
     Train_cfg = configer.train_cfg
     Model_cfg = configer.model
+    Store_root = configer.train_cfg["training_store_root"]
     No_students = Model_cfg["No_students"]
     Current_cfg = dict()
 
@@ -128,7 +129,7 @@ def trainer(configer,model,Train_loader,Val_loader):
     # Getting current run_id
 
     Current_cfg["Run_id"] = Load_run_id if Resume else get_run_id() 
-    Current_cfg["Store_root"] = Train_cfg["training_store_root"]
+    Current_cfg["Store_root"] = Store_root
     Current_cfg["DataParallel"] = configer.model["DataParallel"]
     Current_cfg["Dataset"]  = configer.dataset_cfg['id_cfg']['name']
 
@@ -150,11 +151,27 @@ def trainer(configer,model,Train_loader,Val_loader):
 
     # Setting accuracy and losses lists and constants
     Best_Val_accuracy = 0
-    Train_accuracies = [[] for i in range(no_students+1)]
-    Train_losses = [[] for i in range(no_students+1)]
+
+    if Resume:
+        load_path = os.path.join(Store_root,Load_run_id,"Accuracy_arrays")
+
+        Train_accuracies = [list(np.load(os.path.join(load_path,"Training","Train_Accuracy_for_Combined_Teacher.npy"),encoding="bytes"))]
+        Train_accuracies += [list(np.load(os.path.join(load_path,"Training","Train_Accuracy_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]        
+        Train_losses = [list(np.load(os.path.join(load_path,"Training","Train_loss_for_Overall_Loss.npy"),encoding="bytes"))]
+        Train_losses += [list(np.load(os.path.join(load_path,"Training","Train_loss_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]
+
+        Val_accuracies = [list(np.load(os.path.join(load_path,"Validation","Valid_Accuracies_for_Combined_Teacher.npy"),encoding="bytes"))]
+        Val_accuracies += [list(np.load(os.path.join(load_path,"Validation","Valid_Accuracies_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]        
+        Val_losses = [list(np.load(os.path.join(load_path,"Validation","Val_loss_for_Overall_Loss.npy"),encoding="bytes"))]
+        Val_losses += [list(np.load(os.path.join(load_path,"Validation","Val_loss_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]
+     
+    else:
+        Train_accuracies = [[] for i in range(no_students+1)]
+        Train_losses = [[] for i in range(no_students+1)]
+        Val_accuracies = [[] for i in range(no_students+1)]
+        Val_losses = [[] for i in range(no_students+1)]
+
     Train_ind_losses = [[] for i in range(3)]
-    Val_accuracies = [[] for i in range(no_students+1)]
-    Val_losses = [[] for i in range(no_students+1)]
     Val_ind_losses = [[] for i in range(3)]
 
     if Resume:
@@ -584,7 +601,7 @@ def main(args):
         DataParallel = configer.model["DataParallel"]
 
         Load_path = os.path.join(Store_root,Load_run_id,"Model_saved_states","Epoch_{}".format(Load_Epoch))
-
+        '''
         if DataParallel:
             model.BaseNet.module.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
             for g in range(No_students):
@@ -593,7 +610,10 @@ def main(args):
             model.BaseNet.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
             for g in range(No_students):
                 model.student_models[g].load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
-
+        '''
+        model.BaseNet.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
+        for g in range(No_students):
+            model.student_models[g].load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
         print("\n###### Loaded checkpoint ID {} and Epoch {} successfully\n".format(Load_run_id,Load_Epoch))
 
         if configer.Train_resume:

@@ -61,12 +61,6 @@ train_cfg = dict(
         L3="MSELoss"              # Loss type for Intermmediate representation loss
     ),
 
-    Loss_contribution=dict(
-        alpha = 0.4,              # Contribution ratio for Normal label loss
-        beta = 0.3,               # Contribution ratio for Intermmediate loss
-        gamma = 0.3               # Contribution ratio for KL Loss 
-    ),
-
     scheduler=dict(
         name='ReduceLROnPlateau',    # Select from LambdaLR, StepLR, MultiStepLR, 
                                      # ExponentialLR, ReduceLROnPlateau, CylicLR
