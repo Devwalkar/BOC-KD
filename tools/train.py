@@ -601,7 +601,7 @@ def main(args):
         DataParallel = configer.model["DataParallel"]
 
         Load_path = os.path.join(Store_root,Load_run_id,"Model_saved_states","Epoch_{}".format(Load_Epoch))
-        '''
+
         if DataParallel:
             model.BaseNet.module.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
             for g in range(No_students):
@@ -610,10 +610,7 @@ def main(args):
             model.BaseNet.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
             for g in range(No_students):
                 model.student_models[g].load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
-        '''
-        model.BaseNet.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
-        for g in range(No_students):
-            model.student_models[g].load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
+        
         print("\n###### Loaded checkpoint ID {} and Epoch {} successfully\n".format(Load_run_id,Load_Epoch))
 
         if configer.Train_resume:

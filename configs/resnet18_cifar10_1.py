@@ -77,7 +77,11 @@ train_cfg = dict(
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
+<<<<<<< Updated upstream
     epochs=100,
+=======
+    epochs=300,
+>>>>>>> Stashed changes
     training_store_root="../Model_storage"
 )
 

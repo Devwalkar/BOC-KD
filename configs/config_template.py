@@ -5,6 +5,7 @@
 
 '''
 Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet152"
+                      "Densenet121", "Densenet161", "Densenet169", "Densenet201"
 
 '''
 model = dict(

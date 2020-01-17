@@ -8,15 +8,15 @@ Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet15
 
 '''
 model = dict(
-        name ="Resnet18",
+        name ="Resnet110",
         pretrained = False,           # Select between True and False
-        No_students = 4,              # Number of student models to create for training
+        No_students = 5,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
-        DataParallel = False,         # Select between breaking single model onto
+        DataParallel = True,         # Select between breaking single model onto
         Multi_GPU_replica = False,    # multiple GPUs or replicating model on 
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
-        gpu=[0,1],              # For Resnet50(4 stu) recommended 2 GPUs, 
+        gpu=[0,1],                    # For Resnet50(4 stu) recommended 2 GPUs, 
                                       # For Resnet101(4 stu) 2 GPUs, Resnet152(5 stu) 3 GPUs
         )
 
@@ -31,17 +31,17 @@ Choose dataset from "MNIST", "CIFAR10", "CIFAR100", "Fashion-MNIST"
 dataset_cfg = dict(
     id_cfg=dict(
         root= "../data",
-        name= "CIFAR100",
-        num_classes= 100,
+        name= "CIFAR10",
+        num_classes= 10,
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=48,
+        batch_size=64,
         shuffle=True,
-        num_workers=8
+        num_workers=20
     ),
     val_cfg=dict(
-        batch_size=128,
+        batch_size=32,
         shuffle=False,
         num_workers=8
     )
@@ -52,19 +52,13 @@ dataset_cfg = dict(
 train_cfg = dict(
     optimizer=dict(
         name='Adam',
-        lr=0.0001,
+        lr=0.001,
         weight_decay=1e-5
     ),
     criterion=dict(
         L1='CrossEntropyLoss',    # Loss type for normal label loss 
         L2="KL_Loss",             # Loss for teacher, student probability comparision
         L3="MSELoss"              # Loss type for Intermmediate representation loss
-    ),
-
-    Loss_contribution=dict(
-        alpha = 0.4,              # Contribution ratio for Normal label loss
-        beta = 0.3,               # Contribution ratio for Intermmediate loss
-        gamma = 0.3               # Contribution ratio for KL Loss 
     ),
 
     scheduler=dict(
@@ -78,16 +72,12 @@ train_cfg = dict(
         verbose=True
     ),
 
-    teacher_pretraining= False,
-    pretraining_epochs= 10,             # epochs for which to pretrain the teacher on
+    teacher_pretraining= True,
+    pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
-<<<<<<< Updated upstream:configs/resnet18_cifar100.py
-    epochs=125,
-=======
     epochs=300,
->>>>>>> Stashed changes:configs/resnet18_cifar10_4.py
     training_store_root="../Model_storage"
 )
 
@@ -95,8 +85,8 @@ train_cfg = dict(
 # Training Resume settings
 # Select from either resuming training or validating model on test set 
 
-Train_resume = True                   # Plase keep pretraining False if resuming or validating
+Train_resume = False
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_14_00_05'
-Load_Epoch = 131
+Load_run_id = '01_13_13_16'
+Load_Epoch = 181

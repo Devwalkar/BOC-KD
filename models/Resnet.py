@@ -348,7 +348,7 @@ class BIO_Resnet(nn.Module):
                  no_students = 4,
                  no_blocks = 3,             # Select only from 3,2,1
                  parallel = False,
-                 gpus = [0,1],                         
+                 gpus = [0,1]                         
                  ):
 
         super(BIO_Resnet, self).__init__()
