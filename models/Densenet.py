@@ -4,20 +4,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as cp
 from collections import OrderedDict
-from .utils import load_state_dict_from_url
 from torch import Tensor
 from torch.jit.annotations import List
+from torch.autograd import Variable 
+import numpy as np
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 __all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201', 'densenet161']
-
-model_urls = {
-    'densenet121': 'https://download.pytorch.org/models/densenet121-a639ec97.pth',
-    'densenet169': 'https://download.pytorch.org/models/densenet169-b2777c0a.pth',
-    'densenet201': 'https://download.pytorch.org/models/densenet201-c1103571.pth',
-    'densenet161': 'https://download.pytorch.org/models/densenet161-8d451a50.pth',
-}
 
 
 def Growth_rate_computer(no_blocks = 3,
@@ -25,7 +19,7 @@ def Growth_rate_computer(no_blocks = 3,
                            original_growth_rate =32
                            ):
 
-    Depth_channels_list = []
+    Growth_rate_list = []
 
     if no_blocks==1:
         for j in range(no_students):
@@ -84,23 +78,12 @@ class _DenseLayer(nn.Module):
                 return True
         return False
 
-    @torch.jit.unused  # noqa: T484
     def call_checkpoint_bottleneck(self, input):
         # type: (List[Tensor]) -> Tensor
         def closure(*inputs):
             return self.bn_function(*inputs)
 
         return cp.checkpoint(closure, input)
-
-    @torch.jit._overload_method  # noqa: F811
-    def forward(self, input):
-        # type: (List[Tensor]) -> (Tensor)
-        pass
-
-    @torch.jit._overload_method  # noqa: F811
-    def forward(self, input):
-        # type: (Tensor) -> (Tensor)
-        pass
 
     # torchscript does not yet support *args, so we overload method
     # allowing it to take either a List[Tensor] or single Tensor
@@ -177,7 +160,8 @@ class BaseNet(nn.Module):
     __constants__ = ['features']
 
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
-                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, memory_efficient=False):
+                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, memory_efficient=False,
+                 parallel=False,gpus=[0,1]):
 
         super(BaseNet, self).__init__()
 
@@ -194,13 +178,14 @@ class BaseNet(nn.Module):
         num_features = num_init_features
         num_layers = int(block_config[0])
         block = _DenseBlock(
-                num_layers= num_layers,
-                num_input_features=num_features,
-                bn_size=bn_size,
-                growth_rate=growth_rate,
-                drop_rate=drop_rate,
-                memory_efficient=memory_efficient
-            )
+                    num_layers= num_layers,
+                    num_input_features=num_features,
+                    bn_size=bn_size,
+                    growth_rate=growth_rate,
+                    drop_rate=drop_rate,
+                    memory_efficient=memory_efficient
+                )
+
         self.features.add_module('denseblock1', block)
         num_features = num_features + num_layers * growth_rate
 
@@ -244,9 +229,10 @@ class DenseNet_Student(nn.Module):
     __constants__ = ['features']
 
     def __init__(self, growth_rates=[32,32,32], block_config=(6, 12, 24, 16),
-                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, memory_efficient=False):
+                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, 
+                 memory_efficient=False, parallel=False, gpus=[0,1]):
 
-        super(DenseNet, self).__init__()
+        super(DenseNet_Student, self).__init__()
 
         self.blocks = []
         self.transition_layers = []
@@ -254,6 +240,18 @@ class DenseNet_Student(nn.Module):
         # Each denseblock
         num_features = num_init_features
         for i, (num_layers, growth_rate) in enumerate(zip(block_config[1:],growth_rates)):
+            '''
+            if parallel:
+                self.blocks.append(torch.nn.DataParallel(_DenseBlock(
+                    num_layers=num_layers,
+                    num_input_features=num_features,
+                    bn_size=bn_size,
+                    growth_rate=growth_rate,
+                    drop_rate=drop_rate,
+                    memory_efficient=memory_efficient
+                ).to(device),device_ids=gpus))
+            else:
+            '''
             self.blocks.append(_DenseBlock(
                 num_layers=num_layers,
                 num_input_features=num_features,
@@ -261,16 +259,23 @@ class DenseNet_Student(nn.Module):
                 growth_rate=growth_rate,
                 drop_rate=drop_rate,
                 memory_efficient=memory_efficient
-            ))
+            ).to(device))               
 
             num_features = num_features + num_layers * growth_rate
             if i != len(block_config) - 1:
+                '''
+                if parallel:
+                    self.transition_layers.append(torch.nn.DataParallel(_Transition(num_input_features=num_features,
+                                        num_output_features=num_features // 2).to(device),device_ids=gpus))
+                else:
+                '''
                 self.transition_layers.append(_Transition(num_input_features=num_features,
-                                    num_output_features=num_features // 2))
+                                    num_output_features=num_features // 2).to(device))
+
                 num_features = num_features // 2
 
         # Final batch norm
-        self.features.add_module('norm5', nn.BatchNorm2d(num_features))
+        self.final_norm = nn.BatchNorm2d(num_features)
 
         # Linear layer
         self.classifier = nn.Linear(num_features, num_classes)
@@ -293,6 +298,7 @@ class DenseNet_Student(nn.Module):
         x2 = self.transition_layers[1](x_)
         x_ = self.blocks[2](x2)
         x3 = self.transition_layers[2](x_)
+        x3 = self.final_norm(x3)
         out = F.relu(x3, inplace=True)
         out = F.adaptive_avg_pool2d(out, (1, 1))
         out = torch.flatten(out, 1)
@@ -321,7 +327,7 @@ class BIO_DenseNet(nn.Module):
 
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
                  num_init_features=64, bn_size=4, drop_rate=0, num_classes = 1000, 
-                 memory_efficient=False, no_blocks = 3, no_students = 4 
+                 memory_efficient=False, no_blocks = 3, no_students = 4, 
                  parallel=False,gpus=[0,1], Base_freeze = False
                  ):
 
@@ -334,7 +340,9 @@ class BIO_DenseNet(nn.Module):
                                num_init_features=num_init_features,
                                bn_size=bn_size,
                                drop_rate=drop_rate,
-                               memory_efficient=memory_efficient)
+                               memory_efficient=memory_efficient,
+                               parallel=parallel,
+                               gpus=gpus)
 
         self.BaseNet = self.BaseNet.to(device) if not parallel else torch.nn.DataParallel(self.BaseNet.to(device),
                                                                                           device_ids =gpus)
@@ -349,6 +357,7 @@ class BIO_DenseNet(nn.Module):
         self.pretrain_mode = False
         self.no_students = no_students
         self.no_blocks = no_blocks
+        self.student_num_features = self.BaseNet.module.num_features if parallel else self.BaseNet.num_features
 
         # Initializing student models
 
@@ -358,12 +367,13 @@ class BIO_DenseNet(nn.Module):
 
             Student_M = DenseNet_Student(growth_rates=growth_rates,
                                          block_config=block_config,
-                                         num_init_features=self.BaseNet.num_features,
+                                         num_init_features=self.student_num_features,
                                          bn_size=bn_size,
                                          drop_rate=drop_rate,
                                          num_classes=num_classes,
-                                         memory_efficient=memory_efficient
-                                         )
+                                         memory_efficient=memory_efficient,
+                                         parallel=parallel,
+                                         gpus=gpus)
 
             if not parallel:
                 self.student_models.append(Student_M.to(device))
@@ -431,6 +441,37 @@ class BIO_DenseNet(nn.Module):
         else:
             return self._forward_student(x)
 
+def count_parameters(model):
+
+    total = 0
+    trainable = 0
+    for param in model.parameters():
+        temp = param.numel()
+        total += temp
+        if param.requires_grad:
+            trainable += temp
+
+    return (total,trainable)
+
+def parameter_model_counter(base_model,student_models):
+
+    # Function to count individual student model parameters
+
+    Base_model_count = count_parameters(base_model)
+    Student_model_count = [count_parameters(model) for model in student_models]
+
+    Original_model_params = Base_model_count[0]+Student_model_count[0][0]
+
+    Total_params,Total_trainable_params = Base_model_count[0],Base_model_count[1]
+    print("\nParameter count -->")
+    for i,stu_count in enumerate(Student_model_count):
+        print("Student {}: Total {} | Trainable: {} Compress_ratio: {:.4f}".format(i+1,Base_model_count[0]+stu_count[0],
+                                                                               Base_model_count[1]+stu_count[1],
+                                                            float(Base_model_count[0]+stu_count[0])/Original_model_params))
+        Total_params+=stu_count[0]
+        Total_trainable_params+=stu_count[1]
+    
+    print("Overall Teacher: Total: {} | Trainable: {}\n".format(Total_params,Total_trainable_params))
 
 
 def pretrained_weight_formatter(Arch,parallel):
@@ -465,8 +506,8 @@ def pretrained_weight_formatter(Arch,parallel):
     return base_weights
 
 
-def _bio_densenet(arch, growth_rate, block_config, num_init_features,pretrained=False,
-                  bn_size=4,num_classes = 1000,
+def _bio_densenet(arch, growth_rate, block_config, num_init_features,pretrained,
+                  bn_size,num_classes,no_blocks,no_students,
                   parallel,gpus,Base_freeze,**kwargs
                   ):
 
@@ -474,13 +515,17 @@ def _bio_densenet(arch, growth_rate, block_config, num_init_features,pretrained=
                          block_config=block_config,
                          num_init_features=num_init_features,
                          bn_size=bn_size, drop_rate=0, num_classes = num_classes, 
-                         memory_efficient=True, no_blocks = no_blocks, no_students = no_students 
+                         memory_efficient=False, no_blocks = no_blocks, no_students = no_students,
                          parallel=parallel,gpus=gpus, Base_freeze = Base_freeze,**kwargs)
+
+    parameter_model_counter(model.BaseNet,model.student_models)
 
     if pretrained:
         state_dict = pretrained_weight_formatter(arch,parallel)
         model.BaseNet.load_state_dict(state_dict)
         print("----------- ImageNet pretrained weights successfully loaded")
+
+    return model
 
 
 

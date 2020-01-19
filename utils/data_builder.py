@@ -24,8 +24,9 @@ def Dataset_Loader(configer):
 
         img_transform  = transforms.Compose([transforms.Resize((299,299)),transforms.ToTensor()])
 
-    elif Model in ["Densenet121","VGG_19","Resnet18","Resnet50","Resnet34","Resnet32",
-                        "Resnet101","Resnet110","Resnet152","ResNeXt101-32","ResNeXt101-64"]:
+    elif Model in ["Densenet121","Densenet161","Densenet169","Densenet201","VGG_19","Resnet18",
+                   "Resnet50","Resnet34","Resnet32","Resnet101","Resnet110","Resnet152",
+                   "ResNeXt101-32","ResNeXt101-64"]:
  
         if Dataset_name == "Caltech":
             img_transform = transforms.Compose([
@@ -34,7 +35,10 @@ def Dataset_Loader(configer):
                             transforms.ToTensor()])
                             #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
         else:
-            img_transform  = transforms.Compose([transforms.Resize((224,224)),
+            img_transform  = transforms.Compose([transforms.Resize((300,300)),
+                                                 transforms.ColorJitter(brightness=(0.0,0.5),saturation=(0.0,0.2)),
+                                                 transforms.RandomAffine((-20,20)),
+                                                 transforms.RandomCrop((224,224)),
                                                  transforms.RandomHorizontalFlip(p=0.5),
                                                  transforms.ToTensor()])
                                                  #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]) 
@@ -47,7 +51,7 @@ def Dataset_Loader(configer):
                     transforms.Normalize([0.485,0.456,0.406],[0.229,0.224,0.225])]) 
 
     else:
-        raise ImportError("DL model architecture not supported")   
+        raise ImportError("DL model architecture not supported for Img transforms")   
 
 
 

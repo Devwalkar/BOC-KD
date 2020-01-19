@@ -5,14 +5,15 @@
 
 '''
 Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet152"
+                      "Densenet121", "Densenet161", "Densenet169", "Densenet201"
 
 '''
 model = dict(
-        name ="Resnet18",
+        name ="Densenet169",
         pretrained = False,           # Select between True and False
-        No_students = 5,              # Number of student models to create for training
+        No_students = 4,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
-        DataParallel = True,         # Select between breaking single model onto
+        DataParallel = False,         # Select between breaking single model onto
         Multi_GPU_replica = False,    # multiple GPUs or replicating model on 
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
@@ -36,12 +37,12 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=64,
+        batch_size=16,
         shuffle=True,
-        num_workers=8
+        num_workers=20
     ),
     val_cfg=dict(
-        batch_size=32,
+        batch_size=8,
         shuffle=False,
         num_workers=8
     )
@@ -73,11 +74,11 @@ train_cfg = dict(
     ),
 
     teacher_pretraining= True,
-    pretraining_epochs= 10,             # epochs for which to pretrain the teacher on
+    pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
-    epochs=300,
+    epochs=20,
     training_store_root="../Model_storage"
 )
 
@@ -85,8 +86,8 @@ train_cfg = dict(
 # Training Resume settings
 # Select from either resuming training or validating model on test set 
 
-Train_resume = False                  # Plase keep pretraining False if resuming or validating
+Train_resume = False
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
 Load_run_id = '01_13_13_16'
-Load_Epoch = 191
+Load_Epoch = 181

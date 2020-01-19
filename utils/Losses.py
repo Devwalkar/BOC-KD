@@ -22,6 +22,14 @@ class KL_Loss(nn.Module):
         # teacher_pred shape: (Batch_size,num_classes)
         # student_pred shape: (Batch_size,num_classes)
 
+        # adding noise to teacher preds
+        '''
+        maxs = torch.max(teacher_pred,dim=1)[0]
+        mins = torch.min(teacher_pred,dim=1)[0]
+        Noise = ((maxs - mins)/8).unsqueeze(1)
+        Random_selector = torch.as_tensor(np.random.randint(-1,2,[teacher_pred.size(0),1]),dtype=torch.float32).to(device)
+        modified_teacher_pred = teacher_pred + (Random_selector*Noise)
+        '''
         student_pred = F.log_softmax(student_pred/self.T,dim=1)
         teacher_pred = F.softmax(teacher_pred/self.T,dim=1)
 
@@ -90,6 +98,7 @@ class Normal_Loss(nn.Module):
             Total_loss = self.loss_module(preds,labels)
         
         else:
+   
             Total_loss = []
             for model_pred in preds:
                     Total_loss.append(self.loss_module(model_pred,labels))
@@ -153,7 +162,7 @@ class Combined_Loss(nn.Module):
 
         Loss_A = sum(Individual_normal_losses)
         self.Individual_loss.append(Loss_A.item())
-        Combined_loss += Loss_A
+        Combined_loss += Individual_normal_losses[0]
 
         # Intermmediate loss computation 
 
