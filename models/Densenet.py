@@ -328,7 +328,7 @@ class BIO_DenseNet(nn.Module):
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
                  num_init_features=64, bn_size=4, drop_rate=0, num_classes = 1000, 
                  memory_efficient=False, no_blocks = 3, no_students = 4, 
-                 parallel=False,gpus=[0,1], Base_freeze = False
+                 parallel=False,gpus=[0,1], Base_freeze = False, Common_Base=False
                  ):
 
         super(BIO_DenseNet, self).__init__()
@@ -357,8 +357,11 @@ class BIO_DenseNet(nn.Module):
         self.pretrain_mode = False
         self.no_students = no_students
         self.no_blocks = no_blocks
+        self.Common_Base = Common_Base
         self.student_num_features = self.BaseNet.module.num_features if parallel else self.BaseNet.num_features
 
+        if Common_Base:
+            print("---------- Passing collective gradients through Common Base")
         # Initializing student models
 
         self.student_models = []
@@ -421,7 +424,7 @@ class BIO_DenseNet(nn.Module):
                 Final_out,Inter_reps = self.student_models[0](x)
                 Combined_student_outs = Final_out.unsqueeze(1)
             else:
-                Final_out,Inter_reps = self.student_models[i](x_copy)
+                Final_out,Inter_reps = self.student_models[i](x) if self.Common_Base else self.student_models[i](x_copy)
                 Combined_student_outs = torch.cat((Combined_student_outs,Final_out.unsqueeze(1)),dim=1) # Combined_student_outs shape : (Batch_size,no_students,num_classes) 
 
             Student_final_outs.append(Final_out)

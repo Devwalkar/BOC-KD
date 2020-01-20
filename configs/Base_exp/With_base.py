@@ -10,13 +10,13 @@ Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet15
 model = dict(
         name ="Resnet34",
         pretrained = False,           # Select between True and False
-        No_students = 4,              # Number of student models to create for training
+        No_students = 5,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
         DataParallel = True,         # Select between breaking single model onto
         Multi_GPU_replica = False,    # multiple GPUs or replicating model on 
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
-        Collective_Base_gradient = False, # This passes gradients from all student back to the common base
+        Collective_Base_gradient = True, # This passes gradients from all student back to the common base
         gpu=[0,1],                    # For Resnet50(4 stu) recommended 2 GPUs, 
                                       # For Resnet101(4 stu) 2 GPUs, Resnet152(5 stu) 3 GPUs
         )
@@ -73,7 +73,7 @@ train_cfg = dict(
         verbose=True
     ),
 
-    teacher_pretraining= True,
+    teacher_pretraining= False,
     pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
@@ -86,10 +86,10 @@ train_cfg = dict(
 # Training Resume settings
 # Select from either resuming training or validating model on test set 
 
-Single_model_mode = None               # Use for training baseline single student model. Select from None,0,1,2,3 ..
+Single_model_mode = None              # Use for training baseline single student model. Select from None,0,1,2,3 ..
 
-Train_resume = False
+Train_resume = True
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_13_13_16'
-Load_Epoch = 181
+Load_run_id = '01_19_11_03'
+Load_Epoch = 1

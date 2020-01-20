@@ -348,7 +348,9 @@ class BIO_Resnet(nn.Module):
                  no_students = 4,
                  no_blocks = 3,             # Select only from 3,2,1
                  parallel = False,
-                 gpus = [0,1]                         
+                 gpus = [0,1],
+                 Common_Base = False,
+                 Single_model = 0                         
                  ):
 
         super(BIO_Resnet, self).__init__()
@@ -364,6 +366,12 @@ class BIO_Resnet(nn.Module):
         self.no_students = no_students
         self.no_blocks = no_blocks
         self.pretrain_mode = False
+        self.single_model_mode = False
+        self.Common_Base = Common_Base
+        self.single_model = Single_model
+
+        if Common_Base:
+            print("---------- Passing collective gradients through Common Base")
 
         # Initializing the common base resent model
 
@@ -414,6 +422,9 @@ class BIO_Resnet(nn.Module):
     def pretrain(self):
         self.pretrain_mode = True
 
+    def Single_mode(self):
+        self.single_model_mode = True
+
     def student_version(self):
         self.pretrain_mode = False
 
@@ -422,6 +433,14 @@ class BIO_Resnet(nn.Module):
         x = self.BaseNet(x)
 
         Teacher_out,_ = self.student_models[0](x)         
+
+        return Teacher_out
+
+    def _forward_student_model(self, x):
+
+        x = self.BaseNet(x)
+
+        Teacher_out,_ = self.student_models[int(self.single_model)](x)         
 
         return Teacher_out
 
@@ -439,7 +458,7 @@ class BIO_Resnet(nn.Module):
                 Final_out,Inter_reps = self.student_models[0](x)
                 Combined_student_outs = Final_out.unsqueeze(1)
             else:
-                Final_out,Inter_reps = self.student_models[i](x_copy)
+                Final_out,Inter_reps = self.student_models[i](x_copy) if self.Common_Base else self.student_models[i](x)
                 Combined_student_outs = torch.cat((Combined_student_outs,Final_out.unsqueeze(1)),dim=1) # Combined_student_outs shape : (Batch_size,no_students,num_classes) 
 
             Student_final_outs.append(Final_out)
@@ -456,6 +475,8 @@ class BIO_Resnet(nn.Module):
     def forward(self, x):
         if self.pretrain_mode:
             return self._forward_teacher_pretrain(x)
+        elif self.single_model_mode:
+            return self._forward_student_model(x)
         else:
             return self._forward_student(x)
 

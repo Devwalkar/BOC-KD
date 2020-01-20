@@ -17,6 +17,7 @@ model = dict(
         Multi_GPU_replica = False,    # multiple GPUs or replicating model on 
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
+        Collective_Base_gradient = False, # This passes gradients from all student back to the common base
         gpu=[0,1,2,3,4],              # For Resnet50(4 stu) recommended 2 GPUs, 
                                       # For Resnet101(4 stu) 2 GPUs, Resnet152(5 stu) 3 GPUs
         )
@@ -37,7 +38,7 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=32,
+        batch_size=64,
         shuffle=True,
         num_workers=20
     ),
@@ -73,10 +74,10 @@ train_cfg = dict(
         verbose=True
     ),
 
-    teacher_pretraining= True,
+    teacher_pretraining= False,
     pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
-    test_interval = 10,
+    test_interval = 1,
     plot_accuracy_graphs=True,
     epochs=20,
     training_store_root="../Model_storage"
@@ -86,8 +87,9 @@ train_cfg = dict(
 # Training Resume settings
 # Select from either resuming training or validating model on test set 
 
+Single_model_mode = 3               # Use for training baseline single student model. Select from None,0,1,2,3 ..
 Train_resume = False
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_13_13_16'
-Load_Epoch = 181
+Load_run_id = '01_19_19_10'
+Load_Epoch = 2

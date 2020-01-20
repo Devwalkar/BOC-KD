@@ -36,12 +36,14 @@ def Dataset_Loader(configer):
                             #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
         else:
             img_transform  = transforms.Compose([transforms.Resize((300,300)),
-                                                 transforms.ColorJitter(brightness=(0.0,0.5),saturation=(0.0,0.2)),
+                                                 #transforms.ColorJitter(brightness=(0.0,0.5),saturation=(0.0,0.2)),
                                                  transforms.RandomAffine((-20,20)),
                                                  transforms.RandomCrop((224,224)),
                                                  transforms.RandomHorizontalFlip(p=0.5),
                                                  transforms.ToTensor()])
                                                  #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]) 
+            test_transform = transforms.Compose([transforms.Resize((224,224)),
+                                                 transforms.ToTensor()])
       
     elif Model in ["MobilenetV2"]:
 
@@ -65,11 +67,11 @@ def Dataset_Loader(configer):
         if Data_download:
 
             Trainloader = Data.MNIST(Data_root,download=True,train=True,transform = img_transform)
-            Testloader = Data.MNIST(Data_root,download=True,train=False,transform = img_transform)
+            Testloader = Data.MNIST(Data_root,download=True,train=False, transform = test_transform)
         else:
 
             Trainloader = Data.MNIST(os.path.join(Data_root,"MNIST"),download=False,train=True,transform = img_transform)
-            Testloader = Data.MNIST(os.path.join(Data_root,"MNIST"),download=False,train=False,transform = img_transform)
+            Testloader = Data.MNIST(os.path.join(Data_root,"MNIST"),download=False,train=False, transform = test_transform)
 
     elif Dataset_name == "CIFAR10":  # Shape: (3,32,32)
 
@@ -79,36 +81,36 @@ def Dataset_Loader(configer):
                 os.mkdir(os.path.join(Data_root,"cifar10")) 
          
             Trainloader = Data.CIFAR10(os.path.join(Data_root,"cifar10"),download=True,train=True,transform = img_transform)
-            Testloader = Data.CIFAR10(os.path.join(Data_root,"cifar10"),download=True,train=False,transform = img_transform)
+            Testloader = Data.CIFAR10(os.path.join(Data_root,"cifar10"),download=True,train=False, transform = test_transform)
 
         else:
 
             Trainloader = Data.CIFAR10(os.path.join(Data_root,"cifar10"),download=False,train=True,transform = img_transform)
-            Testloader = Data.CIFAR10(os.path.join(Data_root,"cifar10"),download=False,train=False,transform = img_transform)
+            Testloader = Data.CIFAR10(os.path.join(Data_root,"cifar10"),download=False,train=False, transform = test_transform)
 
     elif Dataset_name == "CIFAR100":  # Shape: (3,32,32)
 
         if Data_download:
          
             Trainloader = Data.CIFAR100(Data_root,download=True,train=True,transform = img_transform)
-            Testloader = Data.CIFAR100(Data_root,download=True,train=False,transform = img_transform)
+            Testloader = Data.CIFAR100(Data_root,download=True,train=False, transform = test_transform)
         
         else:
 
             Trainloader = Data.CIFAR100(Data_root,download=False,train=True,transform = img_transform)
-            Testloader = Data.CIFAR100(Data_root,download=False,train=False,transform = img_transform)
+            Testloader = Data.CIFAR100(Data_root,download=False,train=False, transform = test_transform)
 
     elif Dataset_name == "Fashion-MNIST":
 
         if Data_download:
 
             Trainloader = Data.FashionMNIST(Data_root,download=True,train=True,transform = img_transform)
-            Testloader = Data.FashionMNIST(Data_root,download=True,train=False,transform = img_transform)
+            Testloader = Data.FashionMNIST(Data_root,download=True,train=False, transform = test_transform)
 
         else:           
          
             Trainloader = Data.FashionMNIST(os.path.join(Data_root,"Fashion-MNIST"),download=False,train=True,transform = img_transform)
-            Testloader = Data.FashionMNIST(os.path.join(Data_root,"Fashion-MNIST"),download=False,train=False,transform = img_transform)
+            Testloader = Data.FashionMNIST(os.path.join(Data_root,"Fashion-MNIST"),download=False,train=False, transform = test_transform)
 
     elif Dataset_name == "SVHN":
 
@@ -118,24 +120,24 @@ def Dataset_Loader(configer):
                 os.mkdir(os.path.join(Data_root,"SVHN")) 
              
             Trainloader = Data.SVHN(os.path.join(Data_root,"SVHN"),download=True,split="train",transform = img_transform)
-            Testloader = Data.SVHN(os.path.join(Data_root,"SVHN"),download=True,split="test",transform = img_transform)
+            Testloader = Data.SVHN(os.path.join(Data_root,"SVHN"),download=True,split="test", transform = test_transform)
         
         else:
 
             Trainloader = Data.SVHN(os.path.join(Data_root,"SVHN"),download=False,split="train",transform = img_transform)
-            Testloader = Data.SVHN(os.path.join(Data_root,"SVHN"),download=False,split="test",transform = img_transform)
+            Testloader = Data.SVHN(os.path.join(Data_root,"SVHN"),download=False,split="test", transform = test_transform)
 
     elif Dataset_name == "STL10":
 
         if Data_download:
 
             Trainloader = Data.STL10(os.path.join(Data_root),download=True,split="train",transform = img_transform)
-            Testloader = Data.STL10(os.path.join(Data_root),download=True,split="test",transform = img_transform)
+            Testloader = Data.STL10(os.path.join(Data_root),download=True,split="test", transform = test_transform)
 
         else:
 
             Trainloader = Data.STL10(os.path.join(Data_root),download=False,split="train",transform = img_transform)
-            Testloader = Data.STL10(os.path.join(Data_root),download=False,split="test",transform = img_transform)
+            Testloader = Data.STL10(os.path.join(Data_root),download=False,split="test", transform = test_transform)
 
     elif Dataset_name == "Caltech":
 
@@ -145,12 +147,12 @@ def Dataset_Loader(configer):
                 os.mkdir(os.path.join(Data_root,"Caltech")) 
 
             Trainloader = Caltech256(os.path.join(Data_root,"Caltech"),download=True,train=True,transform=img_transform)
-            Testloader = Caltech256(os.path.join(Data_root,"Caltech"),download=True,train=False,transform=img_transform)
+            Testloader = Caltech256(os.path.join(Data_root,"Caltech"),download=True,train=False, transform = test_transform)
 
         else:
 
             Trainloader = Caltech256(os.path.join(Data_root,"Caltech"),train=True,transform=img_transform)
-            Testloader = Caltech256(os.path.join(Data_root,"Caltech"),train=False,transform=img_transform)
+            Testloader = Caltech256(os.path.join(Data_root,"Caltech"),train=False, transform = test_transform)
 
     else:
         raise ImportError("Dataset not supported")   
