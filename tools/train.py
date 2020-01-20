@@ -59,7 +59,7 @@ def trainer(configer,model,Train_loader,Val_loader):
     Train_cfg = configer.train_cfg
     Model_cfg = configer.model
     Store_root = configer.train_cfg["training_store_root"]
-    No_students = Model_cfg["No_students"]
+    no_students = Model_cfg["No_students"]
     Current_cfg = dict()
 
     # Prepare optimizer
@@ -69,15 +69,20 @@ def trainer(configer,model,Train_loader,Val_loader):
     optim_cls = getattr(optim, optim_name)
     
     param_list = [{'params':model.BaseNet.parameters()}]
-    for i in range(No_students):
+    for i in range(no_students):
         param_list.append({'params':model.student_models[i].parameters()})
 
     optimizer_pretrain = optim_cls(param_list[:2], **optim_cfg)
+    if configer.Single_model_mode is not None:
+        assert configer.Single_model_mode <= (no_students-1),"Single model number should be at max one less than no of students"
+
+        optimizer_student_baseline = optim_cls([param_list[0]]+[param_list[int(configer.Single_model_mode)+1]], **optim_cfg)
+
     optimizer = optim_cls(param_list, **optim_cfg)
 
     Current_cfg["Optimizer"] = optimizer
     Current_cfg["Optimizer_pretrain"] = optimizer_pretrain
-    Current_cfg["No_students"] = No_students
+    Current_cfg["No_students"] = no_students
 
     # Prepare loss function(s)
     loss_cfg = Train_cfg.pop('criterion')
@@ -86,7 +91,6 @@ def trainer(configer,model,Train_loader,Val_loader):
     L3_loss_name = loss_cfg.pop('L3')
     Current_cfg["L1"] = L1_loss_name
 
-    no_students = Model_cfg["No_students"]
     no_blocks = Model_cfg["No_blocks"]
     Temp = Train_cfg["KL_loss_temperature"]
 
@@ -140,11 +144,24 @@ def trainer(configer,model,Train_loader,Val_loader):
     Current_cfg["Plot_Accuracy"] = Train_cfg["plot_accuracy_graphs"]
     Current_cfg["pretrain_epochs"] = Train_cfg["pretraining_epochs"]
     Current_cfg["test_interval"] = Test_interval
+    Current_cfg["Baseline_Epochs"] = Epochs
+
+    # Single model baseline training
+    Single_model = configer.Single_model_mode
+    Current_cfg["Load_epoch"] = Load_epoch
 
     # Teacher pretraining stage
-
     teacher_pretraining = Train_cfg["teacher_pretraining"]
-    if teacher_pretraining:
+
+    if Single_model is not None:
+
+        Current_cfg["Baseline_optimizer"] = optimizer_student_baseline
+        Current_cfg["Student_model"] = Single_model
+        model.Single_mode()
+        Single_Model_training(Current_cfg,model,Train_loader,Val_loader)
+        return None
+
+    elif teacher_pretraining:
         model.pretrain()
         model = Model_Pretraining(Current_cfg,model,Train_loader,Val_loader)
         model.student_version()
@@ -332,6 +349,124 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
     return model
 
 
+def Single_Model_training(Current_cfg,model,Train_loader,Val_loader):
+
+    def get_count(outputs, labels):
+        
+        #Number of correctly predicted labels for each student model.       
+        pred_labels = torch.argmax(outputs, dim=1)
+        count       = torch.sum(torch.eq(pred_labels, labels)).item()
+        return count
+
+    # Training data
+
+    Epochs = Current_cfg["Baseline_Epochs"]
+    optimizer = Current_cfg["Baseline_optimizer"] 
+    Dataset = Current_cfg["Dataset"] 
+    scheduler = Current_cfg["scheduler"]
+    scheduler_name = Current_cfg["scheduler_name"]
+    Test_interval = Current_cfg["test_interval"]
+    Student_model_name = Current_cfg["Student_model"]
+    Resume = Current_cfg["Resume"]
+    Load_epoch = Current_cfg["Load_epoch"] 
+
+    Best_Val_accuracy = 0
+    criterion = Total_loss(pretrain_mode=True,
+                               Normal_loss_module = Current_cfg["L1"]        
+                )
+    if Resume:
+        print ('---------- Resuming Student Model {} Training\n'.format(Student_model_name))   
+        start_epoch = Load_epoch
+    else:    
+        print ('---------- Starting Student Model {} Training\n'.format(Student_model_name))
+        start_epoch = 0
+
+    for i in range(start_epoch,(start_epoch+Epochs)):
+
+        print('\n','*' * 20, 'TRAINING EPOCH {}'.format(i+1), '*'* 20,"\n")
+
+        model.train()
+        start = time.time()
+
+        # Some useful constants
+        num_train_batches = len(Train_loader)
+        num_val_batches = len(Val_loader)
+        running_train_loss = 0
+        running_val_loss = 0
+        Total_train_correct = 0
+        Total_val_correct = 0
+        Total_train_count = 0
+        Total_val_count = 0
+
+        if (scheduler is not None) and (scheduler_name != 'ReduceLROnPlateau'):
+
+            scheduler.step()
+
+        for batch_idx, (Input, labels) in enumerate(Train_loader):
+
+            Input = Input.repeat(1,3,1,1) if Dataset in ["MNIST", "Fashion-MNIST"] else Input
+            Input = Input.float().to(device)
+            labels = labels.to(device)
+
+            Batch_output = model(Input)
+            Loss = criterion(Batch_output, labels)
+
+            optimizer.zero_grad()
+            Loss.backward()
+            optimizer.step()
+
+            running_train_loss +=Loss.item()
+            Total_train_correct += get_count(Batch_output,labels)
+            Total_train_count += len(Input)
+
+            print('Iter: {}/{} | Running loss: {:.3f} | Time elapsed: {:.2f}'
+                    ' mins'.format(batch_idx + 1, num_train_batches,
+                                    running_train_loss/(batch_idx + 1),
+                                    (time.time() - start) / 60), end='\r',
+                    flush=True)
+
+        print('\nTraining epoch results --> Accuracy: {:.3f}% | Overall Loss: {:.3f}'.format(float((Total_train_correct)/Total_train_count)*100,  
+                                                                                                            float(running_train_loss)/num_train_batches
+                                                                                                            ))
+            
+        if (i%Test_interval) == 0:
+            model.eval()
+            start = time.time()
+
+            print('\n','*' * 20, 'VALIDATING EPOCH {}'.format(i+1), '*'* 20,"\n")
+
+            for batch_idx, (Input, labels) in enumerate(Val_loader):
+                Input = Input.repeat(1,3,1,1) if Dataset in ["MNIST", "Fashion-MNIST"] else Input
+                Input = Input.float().to(device)
+                labels = labels.to(device)
+
+                Batch_output = model(Input)
+                Loss = criterion(Batch_output, labels)
+
+                running_val_loss +=Loss.item()
+                Total_val_correct += get_count(Batch_output,labels)
+                Total_val_count += len(Input)
+
+                print('Iter: {}/{} | Running loss: {:.3f} | Time elapsed: {:.2f}'
+                        ' mins'.format(batch_idx + 1, num_val_batches,
+                                        running_val_loss/(batch_idx + 1),
+                                        (time.time() - start) / 60), end='\r',
+                        flush=True)
+
+            Val_accuracy = (float(Total_val_correct)/Total_val_count)*100
+            print('\nValidation epoch results --> Accuracy: {:.3f}% | Overall Loss: {:.3f}'.format(Val_accuracy,  
+                                                                                                    float(running_val_loss)/num_val_batches
+                                                                                                    ))
+            if Val_accuracy > Best_Val_accuracy:
+                Best_Val_accuracy = Val_accuracy
+                Model_State_Saver(model,Current_cfg=Current_cfg,i=i,Single_model_mode=True)
+
+            if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
+                scheduler.step(Val_accuracy)
+    
+    print("\n------------ Student training Stage Completed\n")
+
+
 def Train_epoch(configer,model,Train_loader,Current_cfg,i):
 
     def get_count(outputs, labels):
@@ -506,7 +641,8 @@ def Model_State_Saver(model,
                       Val_accuracies = None,
                       Val_losses = None,
                       Val_ind_losses = None,
-                      i = None
+                      i = None,
+                      Single_model_mode = False,
                       ):
 
     Store_root = Current_cfg["Store_root"]
@@ -529,10 +665,24 @@ def Model_State_Saver(model,
         shutil.copy('../'+args.cfg , os.path.join(Store_root,run_id,"Train_config.py"))
 
         if configer is None:
-            if not os.path.isdir(os.path.join(Store_root,run_id,'Model_saved_states',"Pretraining")):
+            if Single_model_mode and (not os.path.isdir(os.path.join(Store_root,run_id,'Model_saved_states',"Student_training"))):
+                os.mkdir(os.path.join(Store_root,run_id,'Model_saved_states',"Student_training"))
+                os.mkdir(os.path.join(Store_root,run_id,'Model_saved_states',"Student_training","Student_{}".format(Current_cfg["Student_model"])))
+
+            elif not os.path.isdir(os.path.join(Store_root,run_id,'Model_saved_states',"Pretraining")):
                 os.mkdir(os.path.join(Store_root,run_id,'Model_saved_states',"Pretraining"))
 
-    if configer is None:
+    if Single_model_mode:
+
+        os.mkdir(os.path.join(Store_root,run_id,'Model_saved_states',"Student_training","Student_{}".format(Current_cfg["Student_model"]),"Epoch_{}".format(i+1)))        
+        torch.save(model.BaseNet.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Student_training",
+                              "Student_{}".format(Current_cfg["Student_model"]),"Epoch_{}".format(i+1),"BaseNet.pth"))
+        torch.save(model.student_models[Current_cfg["Student_model"]].state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',
+                         "Student_training","Student_{}".format(Current_cfg["Student_model"]),"Epoch_{}".format(i+1),"Non_BaseNet.pth"))
+
+        return None
+
+    elif configer is None:
 
         os.mkdir(os.path.join(Store_root,run_id,'Model_saved_states',"Pretraining","Epoch_{}".format(i+1)))
         torch.save(model.BaseNet.state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Pretraining","Epoch_{}".format(i+1),"BaseNet.pth"))
@@ -599,17 +749,28 @@ def main(args):
         no_blocks = configer.model["No_blocks"]
         Temp = configer.train_cfg["KL_loss_temperature"]
         DataParallel = configer.model["DataParallel"]
+        Single_model_mode = configer.Single_model_mode
 
-        Load_path = os.path.join(Store_root,Load_run_id,"Model_saved_states","Epoch_{}".format(Load_Epoch))
+        if Single_model_mode is not None:
+            Load_path = os.path.join(Store_root,Load_run_id,"Model_saved_states","Student_training","Student_{}".format(Single_model_mode),
+                                     "Epoch_{}".format(Load_Epoch))    
+        else:        
+            Load_path = os.path.join(Store_root,Load_run_id,"Model_saved_states","Epoch_{}".format(Load_Epoch))
 
         if DataParallel:
             model.BaseNet.module.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
-            for g in range(No_students):
-                model.student_models[g].module.load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
+            if Single_model_mode is not None:
+                model.student_models[Single_model_mode].module.load_state_dict(torch.load(os.path.join(Load_path,"Non_BaseNet.pth")))
+            else:
+                for g in range(No_students):
+                    model.student_models[g].module.load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
         else:
             model.BaseNet.load_state_dict(torch.load(os.path.join(Load_path,"BaseNet.pth")))  
-            for g in range(No_students):
-                model.student_models[g].load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
+            if Single_model_mode is not None:
+                model.student_models[Single_model_mode].load_state_dict(torch.load(os.path.join(Load_path,"Non_BaseNet.pth")))
+            else:
+                for g in range(No_students):
+                    model.student_models[g].load_state_dict(torch.load(os.path.join(Load_path,"student_{}.pth".format(g))))
         
         print("\n###### Loaded checkpoint ID {} and Epoch {} successfully\n".format(Load_run_id,Load_Epoch))
 
