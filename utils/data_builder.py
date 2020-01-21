@@ -24,9 +24,7 @@ def Dataset_Loader(configer):
 
         img_transform  = transforms.Compose([transforms.Resize((299,299)),transforms.ToTensor()])
 
-    elif Model in ["Densenet121","Densenet161","Densenet169","Densenet201","VGG_19","Resnet18",
-                   "Resnet50","Resnet34","Resnet32","Resnet101","Resnet110","Resnet152",
-                   "ResNeXt101-32","ResNeXt101-64"]:
+    elif ("Resnet" in Model) or ("Densenet" in Model) or ("Efficientnet" in Model): 
  
         if Dataset_name == "Caltech":
             img_transform = transforms.Compose([

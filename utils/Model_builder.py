@@ -1,10 +1,9 @@
 import torch 
-import pretrainedmodels as PM 
 import torch.nn as nn
 import sys
 sys.path.insert(0, '../')
 
-from models import Resnet,Densenet
+from models import Resnet,Densenet,EfficientNet
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -34,7 +33,15 @@ def Model_builder(configer):
 
         model = Densenet_model(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
                                bn_size=4,no_students=no_students,no_blocks=no_blocks,
-                               parallel=model_dataparallel,gpus=gpu_ids,Common_Base=Common_Base,Single_model = Single_model)
+                               parallel=model_dataparallel,gpus=gpu_ids,Common_Base=Common_Base,
+                               Single_model = Single_model)
+
+    elif "Efficientnet" in model_name:
+        Densenet_model = getattr(EfficientNet,"BIO_"+model_name)
+
+        model = Densenet_model(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                               no_students=no_students,no_blocks=no_blocks,parallel=model_dataparallel,
+                               gpus=gpu_ids,Common_Base=Common_Base,Single_model = Single_model)
 
     else:
         raise ImportError("Model Architecture not supported")
