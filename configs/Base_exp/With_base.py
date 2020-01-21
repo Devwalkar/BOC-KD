@@ -37,7 +37,7 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=64,
+        batch_size=32,
         shuffle=True,
         num_workers=20
     ),
@@ -65,8 +65,8 @@ train_cfg = dict(
     scheduler=dict(
         name='ReduceLROnPlateau',    # Select from LambdaLR, StepLR, MultiStepLR, 
                                      # ExponentialLR, ReduceLROnPlateau, CylicLR
-        patience=1,
-        factor=0.5,
+        patience=3,
+        factor=0.1,
         mode="max",
         #step_size=15,
         #exp_gamma=0.1,
@@ -88,8 +88,8 @@ train_cfg = dict(
 
 Single_model_mode = None              # Use for training baseline single student model. Select from None,0,1,2,3 ..
 
-Train_resume = True
+Train_resume = False
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
 Load_run_id = '01_19_11_03'
-Load_Epoch = 1
+Load_Epoch = 61
