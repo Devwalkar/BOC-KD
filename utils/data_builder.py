@@ -4,6 +4,7 @@ import torch.utils.data as TD
 import torch
 import os 
 from .Caltech_loader import Caltech256 
+from .ImageNet_loader import ImageNetDataset
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -20,36 +21,29 @@ def Dataset_Loader(configer):
 
     ####### Image Transforms builder
 
-    if Model in ["Inceptionv3","Xception"]:
+    if Dataset_name == "CIFAR10":
 
-        img_transform  = transforms.Compose([transforms.Resize((299,299)),transforms.ToTensor()])
+        img_transform  = transforms.Compose([transforms.Pad(4),
+                                            transforms.Resize((300,300)),
+                                            transforms.RandomAffine((-20,20)),
+                                            transforms.RandomCrop((224,224)),
+                                            transforms.RandomHorizontalFlip(p=0.5),
+                                            transforms.ToTensor()])
 
-    elif ("Resnet" in Model) or ("Densenet" in Model) or ("Efficientnet" in Model): 
- 
-        if Dataset_name == "Caltech":
-            img_transform = transforms.Compose([
-                            transforms.Resize((224,224)),
-                            transforms.RandomHorizontalFlip(p=0.5),
-                            transforms.ToTensor()])
-                            #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-        else:
-            img_transform  = transforms.Compose([transforms.Pad(4),
+        test_transform = transforms.Compose([transforms.Resize((224,224)),
+                                            transforms.ToTensor()])
+
+    elif Dataset_name == "Imagenet":
+        img_transform  = transforms.Compose([transforms.Pad(4),
                                                  transforms.Resize((300,300)),
                                                  transforms.RandomAffine((-20,20)),
                                                  transforms.RandomCrop((224,224)),
                                                  transforms.RandomHorizontalFlip(p=0.5),
                                                  transforms.ToTensor()])
-                                                 #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]) 
-            test_transform = transforms.Compose([transforms.Resize((224,224)),
+ 
+        test_transform = transforms.Compose([transforms.Resize((224,224)),
                                                  transforms.ToTensor()])
-      
-    elif Model in ["MobilenetV2"]:
-
-            img_transform = transforms.Compose([
-                    transforms.Resize((224,224)),
-                    transforms.ToTensor(),
-                    transforms.Normalize([0.485,0.456,0.406],[0.229,0.224,0.225])]) 
-
+         
     else:
         raise ImportError("DL model architecture not supported for Img transforms")   
 
@@ -151,6 +145,11 @@ def Dataset_Loader(configer):
 
             Trainloader = Caltech256(os.path.join(Data_root,"Caltech"),train=True,transform=img_transform)
             Testloader = Caltech256(os.path.join(Data_root,"Caltech"),train=False, transform = test_transform)
+
+    elif Dataset_name == "Imagenet":
+
+        Trainloader = ImageNetDataset(os.path.join(Data_root,"ImageNet/ILSVRC-train.lmdb"),transform=img_transform)
+        Testloader = ImageNetDataset(os.path.join(Data_root,"ImageNet/ILSVRC-val.lmdb"),transform=test_transform)
 
     else:
         raise ImportError("Dataset not supported")   
