@@ -21,7 +21,21 @@ def Model_builder(configer):
     no_students = configer.model["No_students"]
     no_blocks = configer.model["No_blocks"]
 
-    if "Resnet" in model_name:
+    if "Wide_Resnet" in model_name:
+        
+        Resnet_model = getattr(Resnet,"BIO_"+model_name)
+        model = Resnet_model(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                             no_students=no_students,no_blocks=no_blocks,parallel=model_dataparallel,
+                             gpus=gpu_ids,Common_Base=Common_Base,Single_model = Single_model)
+
+    elif "Resnet" in model_name:
+        
+        Resnet_model = getattr(Resnet,"BIO_"+model_name)
+        model = Resnet_model(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                             no_students=no_students,no_blocks=no_blocks,parallel=model_dataparallel,
+                             gpus=gpu_ids,Common_Base=Common_Base,Single_model = Single_model)
+
+    elif "Resnext" in model_name:
         
         Resnet_model = getattr(Resnet,"BIO_"+model_name)
         model = Resnet_model(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
@@ -31,8 +45,8 @@ def Model_builder(configer):
     elif "Densenet" in model_name:
         Densenet_model = getattr(Densenet,"BIO_"+model_name)
 
-        model = Densenet_model(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
-                               bn_size=4,no_students=no_students,no_blocks=no_blocks,
+        model = Densenet_model(num_classes = No_classes,Base_freeze=Base_freeze,
+                               no_students=no_students,no_blocks=no_blocks,
                                parallel=model_dataparallel,gpus=gpu_ids,Common_Base=Common_Base,
                                Single_model = Single_model)
 

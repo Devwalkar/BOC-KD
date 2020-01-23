@@ -376,8 +376,8 @@ class BIO_Resnet(nn.Module):
         # Initializing the common base resent model
 
         self.BaseNet = BaseNet(block=block,layers=layers, num_classes=num_classes, zero_init_residual=False,
-                                       groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                                       norm_layer=None,)
+                                       groups=groups, width_per_group=width_per_group, replace_stride_with_dilation=None,
+                                       norm_layer=None)
 
         self.BaseNet = self.BaseNet.to(device) if not parallel else torch.nn.DataParallel(self.BaseNet.to(device),
                                                                                                device_ids =gpus)
@@ -393,8 +393,8 @@ class BIO_Resnet(nn.Module):
 
             Student_M = Resnet_Student(block=block,layers=layers, num_classes=num_classes, 
                                                       zero_init_residual=False,
-                                                      groups=1, 
-                                                      width_per_group=64, 
+                                                      groups=groups, 
+                                                      width_per_group=width_per_group, 
                                                       replace_stride_with_dilation=None,
                                                       norm_layer=None,
                                                       depth_channels=depth_channels)
@@ -530,6 +530,18 @@ def pretrained_weight_formatter(Arch,parallel):
 
     elif Arch == "Resnet152":
         Overall_model_dict = torch.load("../models/pretrained_weights/Resnet/resnet152.pth")
+    
+    elif Arch == "Resnext50_32x4d":
+        Overall_model_dict = torch.load("../models/pretrained_weights/Resnext/resnext50_32x4d.pth")        
+
+    elif Arch == "Resnext101_32x8d":
+        Overall_model_dict = torch.load("../models/pretrained_weights/Resnext/resnext101_32x8d.pth") 
+
+    elif Arch == "Wide_Resnet50_2":
+        Overall_model_dict = torch.load("../models/pretrained_weights/Wide_Resnet/wide_resnet50_2.pth") 
+
+    elif Arch == "Wide_Resnet101_2":
+        Overall_model_dict = torch.load("../models/pretrained_weights/Wide_Resnet/wide_resnet101_2.pth") 
 
     for key in Overall_model_dict.keys():
 
@@ -641,7 +653,7 @@ def BIO_Resnet152(pretrained=False, progress=True, **kwargs):
                    **kwargs)
 
 
-def resnext50_32x4d(pretrained=False, progress=True, **kwargs):
+def BIO_Resnext50_32x4d(pretrained=False, progress=True, **kwargs):
     r"""ResNeXt-50 32x4d model from
     `"Aggregated Residual Transformation for Deep Neural Networks" <https://arxiv.org/pdf/1611.05431.pdf>`_
 
@@ -651,11 +663,11 @@ def resnext50_32x4d(pretrained=False, progress=True, **kwargs):
     """
     kwargs['groups'] = 32
     kwargs['width_per_group'] = 4
-    return _BIO_Resnet('resnext50_32x4d', Bottleneck, [3, 4, 6, 3],
+    return _BIO_Resnet('Resnext50_32x4d', Bottleneck, [3, 4, 6, 3],
                    pretrained, progress, **kwargs)
 
 
-def resnext101_32x8d(pretrained=False, progress=True, **kwargs):
+def BIO_Resnext101_32x8d(pretrained=False, progress=True, **kwargs):
     r"""ResNeXt-101 32x8d model from
     `"Aggregated Residual Transformation for Deep Neural Networks" <https://arxiv.org/pdf/1611.05431.pdf>`_
 
@@ -665,11 +677,11 @@ def resnext101_32x8d(pretrained=False, progress=True, **kwargs):
     """
     kwargs['groups'] = 32
     kwargs['width_per_group'] = 8
-    return _BIO_Resnet('resnext101_32x8d', Bottleneck, [3, 4, 23, 3],
+    return _BIO_Resnet('Resnext101_32x8d', Bottleneck, [3, 4, 23, 3],
                    pretrained, progress, **kwargs)
 
 
-def wide_BIO_Resnet50_2(pretrained=False, progress=True, **kwargs):
+def BIO_Wide_Resnet50_2(pretrained=False, progress=True, **kwargs):
     r"""Wide BIO_Resnet-50-2 model from
     `"Wide Residual Networks" <https://arxiv.org/pdf/1605.07146.pdf>`_
 
@@ -683,11 +695,11 @@ def wide_BIO_Resnet50_2(pretrained=False, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     kwargs['width_per_group'] = 64 * 2
-    return _BIO_Resnet('wide_BIO_Resnet50_2', Bottleneck, [3, 4, 6, 3],
+    return _BIO_Resnet('Wide_Resnet50_2', Bottleneck, [3, 4, 6, 3],
                    pretrained, progress, **kwargs)
 
 
-def wide_BIO_Resnet101_2(pretrained=False, progress=True, **kwargs):
+def BIO_Wide_Resnet101_2(pretrained=False, progress=True, **kwargs):
     r"""Wide BIO_Resnet-101-2 model from
     `"Wide Residual Networks" <https://arxiv.org/pdf/1605.07146.pdf>`_
 
@@ -701,5 +713,5 @@ def wide_BIO_Resnet101_2(pretrained=False, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     kwargs['width_per_group'] = 64 * 2
-    return _BIO_Resnet('wide_BIO_Resnet101_2', Bottleneck, [3, 4, 23, 3],
+    return _BIO_Resnet('Wide_Resnet101_2', Bottleneck, [3, 4, 23, 3],
                    pretrained, progress, **kwargs)
