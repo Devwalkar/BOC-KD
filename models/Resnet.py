@@ -596,16 +596,6 @@ def BIO_Resnet34(pretrained=False, progress=True, **kwargs):
     return _BIO_Resnet('Resnet34', BasicBlock, [3, 4, 6, 3], pretrained, progress,
                    **kwargs)
 
-def BIO_Resnet32(pretrained=False, progress=True, **kwargs):
-    r"""BIO_Resnet-34 model from
-    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
-    """
-    return _BIO_Resnet('Resnet32', BasicBlock, [3, 3, 2, 3], pretrained, progress,mod=True,
-                   **kwargs)
 
 def BIO_Resnet50(pretrained=False, progress=True, **kwargs):
     r"""BIO_Resnet-50 model from
@@ -628,17 +618,6 @@ def BIO_Resnet101(pretrained=False, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _BIO_Resnet('Resnet101', Bottleneck, [3, 4, 23, 3], pretrained, progress,
-                   **kwargs)
-
-def BIO_Resnet110(pretrained=False, progress=True, **kwargs):
-    r"""BIO_Resnet-101 model from
-    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
-    """
-    return _BIO_Resnet('Resnet110', Bottleneck, [6, 8, 46, 6], pretrained, progress,mod=True,
                    **kwargs)
 
 def BIO_Resnet152(pretrained=False, progress=True, **kwargs):

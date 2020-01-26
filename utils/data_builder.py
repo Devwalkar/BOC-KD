@@ -24,14 +24,16 @@ def Dataset_Loader(configer):
     if Dataset_name == "CIFAR10":
 
         img_transform  = transforms.Compose([transforms.Pad(4),
-                                            transforms.Resize((300,300)),
                                             transforms.RandomAffine((-20,20)),
-                                            transforms.RandomCrop((224,224)),
                                             transforms.RandomHorizontalFlip(p=0.5),
-                                            transforms.ToTensor()])
+                                            transforms.RandomCrop((32,32)),
+                                            transforms.ToTensor(),
+                                            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)) 
+                                            ])
 
-        test_transform = transforms.Compose([transforms.Resize((224,224)),
-                                            transforms.ToTensor()])
+        test_transform = transforms.Compose([transforms.ToTensor(),
+                                            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+                                            ])
 
     elif Dataset_name == "Imagenet":
         img_transform  = transforms.Compose([transforms.Pad(4),
@@ -39,10 +41,12 @@ def Dataset_Loader(configer):
                                                  transforms.RandomAffine((-20,20)),
                                                  transforms.RandomCrop((224,224)),
                                                  transforms.RandomHorizontalFlip(p=0.5),
-                                                 transforms.ToTensor()])
+                                                 transforms.ToTensor()
+                                                 ])
  
         test_transform = transforms.Compose([transforms.Resize((224,224)),
-                                                 transforms.ToTensor()])
+                                                 transforms.ToTensor()
+                                                 ])
          
     else:
         raise ImportError("DL model architecture not supported for Img transforms")   

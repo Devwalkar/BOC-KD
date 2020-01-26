@@ -1,17 +1,18 @@
-""" Template Configuration file for CIFAR10 training on Resnet18
+""" Template Configuration file 
 """
 
 # DL model Architecture Settings
 
 '''
-Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet152"
+Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet152",
+                      "ResNet20","ResNet32","ResNet44","ResNet56","ResNet110","ResNet1202",
                       "Densenet_12_100", "Densenet_24_250", "Densenet_40_190",
                       "Efficientnet_(B0-B7)", "Resnext50_32x4d", "Resnext101_32x8d",
                       "Wide_Resnet50_2", "Wide_Resnet101_2"
 
 '''
 model = dict(
-        name ="Densenet_40_190",
+        name ="ResNet110",
         pretrained = False,           # Select between True and False
         No_students = 5,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
@@ -20,10 +21,9 @@ model = dict(
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
         Collective_Base_gradient = False, # This passes gradients from all student back to the common base
-        gpu=[0,1,2,3],              # For Resnet50(4 stu) recommended 2 GPUs, 
+        gpu=[0,1],              # For Resnet50(4 stu) recommended 2 GPUs, 
                                       # For Resnet101(4 stu) 2 GPUs, Resnet152(5 stu) 3 GPUs
         )
-
 
 # Dataset Settings
 
@@ -90,6 +90,7 @@ train_cfg = dict(
 # Select from either resuming training or validating model on test set 
 
 Single_model_mode = 0               # Use for training baseline single student model. Select from None,0,1,2,3 ..
+
 Train_resume = False
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate

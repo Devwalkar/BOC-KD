@@ -200,10 +200,6 @@ def trainer(configer,model,Train_loader,Val_loader):
 
     for i in range(start_epoch,start_epoch+Epochs):
 
-        if (scheduler is not None) and (scheduler_name != 'ReduceLROnPlateau'):
-
-            scheduler.step()
-
         model,Epoch_train_set_accuracy,Epoch_train_set_loss,Epoch_train_individual_loss = Train_epoch(configer,model,Train_loader,Current_cfg,i)
 
         for j in range(no_students+1):
@@ -234,6 +230,10 @@ def trainer(configer,model,Train_loader,Val_loader):
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
 
                 scheduler.step(Epoch_Val_set_accuracy[0])
+            
+            elif scheduler_name == "MultiStepLR":
+                
+                scheduler.step()
 
     Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
 

@@ -4,11 +4,15 @@
 # DL model Architecture Settings
 
 '''
-Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet152"
+Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet152",
+                      "ResNet20","ResNet32","ResNet44","ResNet56","ResNet110","ResNet1202",
+                      "Densenet_12_100", "Densenet_24_250", "Densenet_40_190",
+                      "Efficientnet_(B0-B7)", "Resnext50_32x4d", "Resnext101_32x8d",
+                      "Wide_Resnet50_2", "Wide_Resnet101_2"
 
 '''
 model = dict(
-        name ="Resnet34",
+        name ="ResNet110",
         pretrained = False,           # Select between True and False
         No_students = 5,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
@@ -37,7 +41,7 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=32,
+        batch_size=64,
         shuffle=True,
         num_workers=20
     ),
@@ -52,9 +56,9 @@ dataset_cfg = dict(
 
 train_cfg = dict(
     optimizer=dict(
-        name='Adam',
-        lr=0.001,
-        weight_decay=1e-5
+        name='SGD',
+        lr=0.1,
+        weight_decay=5e-4
     ),
     criterion=dict(
         L1='CrossEntropyLoss',    # Loss type for normal label loss 
@@ -63,22 +67,25 @@ train_cfg = dict(
     ),
 
     scheduler=dict(
-        name='ReduceLROnPlateau',    # Select from LambdaLR, StepLR, MultiStepLR, 
+        name='MultiStepLR',          # Select from LambdaLR, StepLR, MultiStepLR, 
                                      # ExponentialLR, ReduceLROnPlateau, CylicLR
-        patience=3,
-        factor=0.1,
-        mode="max",
+        #patience=1,                   # For ReduceLROnPlateau
+        #factor=0.1,
+        #mode="max",
         #step_size=15,
         #exp_gamma=0.1,
-        verbose=True
+        #verbose=True
+        milestones=[150,200,250,300],   # For MultiStepLR
+        last_epoch=-1,
+        gamma=0.1
     ),
 
     teacher_pretraining= False,
     pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on
-    KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
+    KL_loss_temperature = 2,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
-    epochs=300,
+    epochs=350,
     training_store_root="../Model_storage"
 )
 
@@ -91,5 +98,5 @@ Single_model_mode = None              # Use for training baseline single student
 Train_resume = False
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_19_11_03'
-Load_Epoch = 61
+Load_run_id = '01_21_09_21'
+Load_Epoch = 171

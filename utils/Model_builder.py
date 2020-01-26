@@ -3,7 +3,7 @@ import torch.nn as nn
 import sys
 sys.path.insert(0, '../')
 
-from models import Resnet,Densenet,EfficientNet
+from models import Resnet,Densenet,EfficientNet,ResNet_cifar
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -32,6 +32,13 @@ def Model_builder(configer):
         
         Resnet_model = getattr(Resnet,"BIO_"+model_name)
         model = Resnet_model(num_classes = No_classes,pretrained=model_pretrained,Base_freeze=Base_freeze,
+                             no_students=no_students,no_blocks=no_blocks,parallel=model_dataparallel,
+                             gpus=gpu_ids,Common_Base=Common_Base,Single_model = Single_model)
+
+    elif "ResNet" in model_name:
+        
+        Resnet_model = getattr(ResNet_cifar,"BIO_"+model_name)
+        model = Resnet_model(num_classes = No_classes,Base_freeze=Base_freeze,
                              no_students=no_students,no_blocks=no_blocks,parallel=model_dataparallel,
                              gpus=gpu_ids,Common_Base=Common_Base,Single_model = Single_model)
 
