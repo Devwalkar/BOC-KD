@@ -231,9 +231,9 @@ def trainer(configer,model,Train_loader,Val_loader):
 
                 scheduler.step(Epoch_Val_set_accuracy[0])
             
-            elif scheduler_name == "MultiStepLR":
+        if scheduler_name == "MultiStepLR":
                 
-                scheduler.step()
+            scheduler.step()
 
     Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
 
@@ -278,10 +278,6 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
         Total_val_correct = 0
         Total_train_count = 0
         Total_val_count = 0
-
-        if (scheduler is not None) and (scheduler_name != 'ReduceLROnPlateau'):
-
-            scheduler.step()
 
         for batch_idx, (Input, labels) in enumerate(Train_loader):
 
@@ -344,7 +340,10 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
 
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
                 scheduler.step(Val_accuracy)
-    
+            
+        if scheduler_name == "MultiStepLR":
+                scheduler.step()
+
     print("\n------------ Pretraining Stage Completed\n")
     return model
 
@@ -381,6 +380,7 @@ def Single_Model_training(Current_cfg,model,Train_loader,Val_loader):
         print ('---------- Starting Student Model {} Training\n'.format(Student_model_name))
         start_epoch = 0
 
+
     for i in range(start_epoch,(start_epoch+Epochs)):
 
         print('\n','*' * 20, 'TRAINING EPOCH {}'.format(i+1), '*'* 20,"\n")
@@ -397,10 +397,6 @@ def Single_Model_training(Current_cfg,model,Train_loader,Val_loader):
         Total_val_correct = 0
         Total_train_count = 0
         Total_val_count = 0
-
-        if (scheduler is not None) and (scheduler_name != 'ReduceLROnPlateau'):
-
-            scheduler.step()
 
         for batch_idx, (Input, labels) in enumerate(Train_loader):
 
@@ -463,7 +459,10 @@ def Single_Model_training(Current_cfg,model,Train_loader,Val_loader):
 
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
                 scheduler.step(Val_accuracy)
-    
+
+        if scheduler_name == 'MultiStepLR':
+                scheduler.step()
+
     print("\n------------ Student training Stage Completed\n")
 
 

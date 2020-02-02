@@ -24,7 +24,7 @@ def Dataset_Loader(configer):
     if Dataset_name == "CIFAR10":
 
         img_transform  = transforms.Compose([transforms.Pad(4),
-                                            transforms.RandomAffine((-20,20)),
+                                            #transforms.RandomAffine((-20,20)),
                                             transforms.RandomHorizontalFlip(p=0.5),
                                             transforms.RandomCrop((32,32)),
                                             transforms.ToTensor(),
@@ -36,16 +36,18 @@ def Dataset_Loader(configer):
                                             ])
 
     elif Dataset_name == "Imagenet":
-        img_transform  = transforms.Compose([transforms.Pad(4),
-                                                 transforms.Resize((300,300)),
-                                                 transforms.RandomAffine((-20,20)),
-                                                 transforms.RandomCrop((224,224)),
-                                                 transforms.RandomHorizontalFlip(p=0.5),
-                                                 transforms.ToTensor()
-                                                 ])
+        img_transform  = transforms.Compose([transforms.Resize((224,224)),
+                                            transforms.Pad(50),
+                                            transforms.RandomAffine((-10,10)),
+                                            transforms.RandomCrop((224,224)),
+                                            transforms.RandomHorizontalFlip(p=0.5),
+                                            transforms.ToTensor(),
+                                            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+                                            ])
  
         test_transform = transforms.Compose([transforms.Resize((224,224)),
-                                                 transforms.ToTensor()
+                                                 transforms.ToTensor(),
+                                                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                                  ])
          
     else:

@@ -68,13 +68,17 @@ train_cfg = dict(
     scheduler=dict(
         name='ReduceLROnPlateau',    # Select from LambdaLR, StepLR, MultiStepLR, 
                                      # ExponentialLR, ReduceLROnPlateau, CylicLR
-        patience=1,
-        factor=0.5,
-        mode="max",
+       #patience=1,                   # For ReduceLROnPlateau
+        #factor=0.1,
+        #mode="max",
         #step_size=15,
         #exp_gamma=0.1,
-        verbose=True
+        #verbose=True
+        milestones=[150,200,250,300],   # For MultiStepLR
+        last_epoch=-1,
+        gamma=0.1
     ),
+
 
     teacher_pretraining= False,
     pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on

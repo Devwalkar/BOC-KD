@@ -116,6 +116,7 @@ class ResNet_Student(nn.Module):
         self.layer2 = self._make_layer(block, depth_channels[1], num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, depth_channels[2], num_blocks[2], stride=2)
         self.linear = nn.Linear(depth_channels[2], num_classes)
+        self.dropout = nn.Dropout(p=0.3)
 
         self.apply(_weights_init)
 

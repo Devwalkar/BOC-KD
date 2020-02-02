@@ -41,7 +41,7 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=64,
+        batch_size=32,
         shuffle=True,
         num_workers=20
     ),
@@ -57,8 +57,8 @@ dataset_cfg = dict(
 train_cfg = dict(
     optimizer=dict(
         name='SGD',
-        lr=0.1,
-        weight_decay=5e-4,
+        lr=0.0005,
+        weight_decay=1e-5,
         momentum=0.9
     ),
     criterion=dict(
@@ -86,7 +86,7 @@ train_cfg = dict(
     KL_loss_temperature = 2,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
-    epochs=350,
+    epochs=200,
     training_store_root="../Model_storage"
 )
 
@@ -96,8 +96,8 @@ train_cfg = dict(
 
 Single_model_mode = None               # Use for training baseline single student model. Select from None,0,1,2,3 ..
 
-Train_resume = False
+Train_resume = True
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_21_09_09'
-Load_Epoch = 211
+Load_run_id = '01_26_08_44'
+Load_Epoch = 381

@@ -1,4 +1,4 @@
-""" Template Configuration file for CIFAR10 training on Resnet18
+""" Template Configuration file 
 """
 
 # DL model Architecture Settings
@@ -21,10 +21,9 @@ model = dict(
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
         Collective_Base_gradient = False, # This passes gradients from all student back to the common base
-        gpu=[0,1],                    # For Resnet50(4 stu) recommended 2 GPUs, 
+        gpu=[0,1],              # For Resnet50(4 stu) recommended 2 GPUs, 
                                       # For Resnet101(4 stu) 2 GPUs, Resnet152(5 stu) 3 GPUs
         )
-
 
 # Dataset Settings
 
@@ -41,7 +40,7 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=32,
+        batch_size=128,
         shuffle=True,
         num_workers=20
     ),
@@ -57,8 +56,8 @@ dataset_cfg = dict(
 train_cfg = dict(
     optimizer=dict(
         name='SGD',
-        lr=0.01,
-        weight_decay=1e-5,
+        lr=0.1,
+        weight_decay=1e-4,
         momentum=0.9
     ),
     criterion=dict(
@@ -68,25 +67,26 @@ train_cfg = dict(
     ),
 
     scheduler=dict(
-        name='MultiStepLR',    # Select from LambdaLR, StepLR, MultiStepLR, 
+        name='MultiStepLR',          # Select from LambdaLR, StepLR, MultiStepLR, 
                                      # ExponentialLR, ReduceLROnPlateau, CylicLR
-        #patience=1,                   # For ReduceLROnPlateau
+       #patience=1,                   # For ReduceLROnPlateau
         #factor=0.1,
         #mode="max",
         #step_size=15,
         #exp_gamma=0.1,
         #verbose=True
-        milestones=[150,200,250,300],   # For MultiStepLR
+        milestones=[150,200,250],   # For MultiStepLR
         last_epoch=-1,
         gamma=0.1
     ),
 
+
     teacher_pretraining= False,
     pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on
-    KL_loss_temperature = 2,            # Temperature for creating softened log softmax for KL loss 
+    KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
-    epochs=350,
+    epochs=300,
     training_store_root="../Model_storage"
 )
 
@@ -94,10 +94,10 @@ train_cfg = dict(
 # Training Resume settings
 # Select from either resuming training or validating model on test set 
 
-Single_model_mode = None               # Use for training baseline single student model. Select from None,0,1,2,3 ..
+Single_model_mode = 0                  # Use for training baseline single student model. Select from None,0,1,2,3 ..
 
-Train_resume = False
+Train_resume = True
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_20_09_58'
-Load_Epoch = 21
+Load_run_id = '01_31_19_34'
+Load_Epoch = 11

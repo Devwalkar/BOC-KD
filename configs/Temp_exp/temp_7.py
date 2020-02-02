@@ -41,7 +41,7 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=64,
+        batch_size=32,
         shuffle=True,
         num_workers=20
     ),
@@ -57,8 +57,8 @@ dataset_cfg = dict(
 train_cfg = dict(
     optimizer=dict(
         name='SGD',
-        lr=0.1,
-        weight_decay=5e-4,
+        lr=0.01,
+        weight_decay=1e-5,
         momentum=0.9
     ),
     criterion=dict(

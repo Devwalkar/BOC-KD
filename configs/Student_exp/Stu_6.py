@@ -41,7 +41,7 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=64,
+        batch_size=32,
         shuffle=True,
         num_workers=20
     ),
@@ -57,8 +57,8 @@ dataset_cfg = dict(
 train_cfg = dict(
     optimizer=dict(
         name='SGD',
-        lr=0.1,
-        weight_decay=5e-4
+        lr=0.01,
+        weight_decay=1e-5
     ),
     criterion=dict(
         L1='CrossEntropyLoss',    # Loss type for normal label loss 
@@ -85,7 +85,7 @@ train_cfg = dict(
     KL_loss_temperature = 2,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
-    epochs=300,
+    epochs=350,
     training_store_root="../Model_storage"
 )
 
