@@ -23,7 +23,22 @@ def Dataset_Loader(configer):
 
     if Dataset_name == "CIFAR10":
 
-        img_transform  = transforms.Compose([transforms.Pad(4),
+        if "Efficientnet" in Model:
+            img_transform  = transforms.Compose([transforms.Resize((224,224)),
+                                                 transforms.Pad(30),
+                                                 #transforms.RandomAffine((-5,5)),
+                                                 transforms.RandomHorizontalFlip(p=0.5),
+                                                 transforms.RandomCrop((224,224)),
+                                                 transforms.ToTensor(),
+                                                 transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)) 
+                                                ])
+
+            test_transform = transforms.Compose([transforms.Resize((224,224)),
+                                                 transforms.ToTensor(),
+                                                 transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+                                                ])
+        else:
+            img_transform  = transforms.Compose([transforms.Pad(4),
                                             #transforms.RandomAffine((-20,20)),
                                             transforms.RandomHorizontalFlip(p=0.5),
                                             transforms.RandomCrop((32,32)),
@@ -31,7 +46,7 @@ def Dataset_Loader(configer):
                                             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)) 
                                             ])
 
-        test_transform = transforms.Compose([transforms.ToTensor(),
+            test_transform = transforms.Compose([transforms.ToTensor(),
                                             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
                                             ])
 

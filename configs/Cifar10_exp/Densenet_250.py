@@ -21,7 +21,7 @@ model = dict(
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
         Collective_Base_gradient = False, # This passes gradients from all student back to the common base
-        gpu=[0,1,2,3,4,5],              # For Resnet50(4 stu) recommended 2 GPUs, 
+        gpu=[0,1,2,3,4,5,6,7],              # For Resnet50(4 stu) recommended 2 GPUs, 
                                       # For Resnet101(4 stu) 2 GPUs, Resnet152(5 stu) 3 GPUs
         )
 
@@ -63,7 +63,12 @@ train_cfg = dict(
     criterion=dict(
         L1='CrossEntropyLoss',    # Loss type for normal label loss 
         L2="KL_Loss",             # Loss for teacher, student probability comparision
-        L3="MSELoss"              # Loss type for Intermmediate representation loss
+        L3="MSELoss",              # Loss type for Intermmediate representation loss
+        Adaptation_use = True,     # Use Adaptation layers for intermediate loss
+        contribution_ratios = [1.0,1.0,1.0] # Contribution ratios for all losses 
+                                            # 0: Teacher Normal loss 
+                                            # 1: Intermediate Loss
+                                            # 2: Student KL Loss
     ),
 
     scheduler=dict(

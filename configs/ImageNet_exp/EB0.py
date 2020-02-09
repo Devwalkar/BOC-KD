@@ -14,7 +14,7 @@ Choose DL model from  "Resnet20", "Resnet34", "Resnet50", "Resnet101", "Resnet15
 model = dict(
         name ="Efficientnet_B0",
         pretrained = False,           # Select between True and False
-        No_students = 4,              # Number of student models to create for training
+        No_students = 5,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
         DataParallel = True,         # Select between breaking single model onto
         Multi_GPU_replica = False,    # multiple GPUs or replicating model on 

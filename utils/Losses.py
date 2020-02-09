@@ -43,7 +43,8 @@ class Intermmediate_loss(nn.Module):
 
     def __init__(self, no_students = 4,
                        no_blocks = 3, 
-                       Loss_module = 'MSELoss'
+                       Loss_module = 'MSELoss',
+                       Adaptation_use = True
                 ):
 
         # Intermmediate loss module for blockwise representation comparision of pseudo teacher with students
@@ -52,7 +53,22 @@ class Intermmediate_loss(nn.Module):
         self.no_students = no_students
         self.no_blocks = no_blocks
         self.loss_module = getattr(nn,Loss_module)()
+        self.adaptation_layer_compute = True
+        self.adaptation_use = Adaptation_use
     
+    def adaptation_layer_init(self,intermmediate_maps):
+
+        self.adaptation_layers = []
+        for i in range(self.no_blocks):
+            Teacher_channels = intermmediate_maps[i][0].size(1)
+            layers_per_block = []
+            for j in range(1,self.no_students):
+                student_channels = intermmediate_maps[i][j].size(1)
+                layers_per_block.append(nn.Conv2d(student_channels,Teacher_channels,1).to(device))
+            
+            self.adaptation_layers.append(layers_per_block)
+
+
     def forward(self,intermmediate_maps):
 
         # intermmediate_maps shape : [list of maps per block level 1 ,list of maps per block level 2, .... ]
@@ -61,13 +77,22 @@ class Intermmediate_loss(nn.Module):
 
         Total_loss = 0
 
+        if self.adaptation_layer_compute:
+            self.adaptation_layer_init(intermmediate_maps)
+            self.adaptation_layer_compute = False
+
         for i in range(self.no_blocks):
             Pseudo_Teacher_pred = intermmediate_maps[i][0]
 
-            Pseudo_Teacher_pred = Pseudo_Teacher_pred.mean(1).squeeze(1)
+            if not(self.adaptation_use):
+                Pseudo_Teacher_pred = Pseudo_Teacher_pred.mean(1).squeeze(1)
             
             for j in range(1,self.no_students):
-                intermmediate_map = intermmediate_maps[i][j].mean(1).squeeze(1)
+                if self.adaptation_use:
+                    intermmediate_map = self.adaptation_layers[i][j-1](intermmediate_maps[i][j])
+                else:
+                    intermmediate_map = intermmediate_maps[i][j].mean(1).squeeze(1)
+
                 Total_loss += self.loss_module(Pseudo_Teacher_pred,intermmediate_map)
 
                 
@@ -114,7 +139,9 @@ class Combined_Loss(nn.Module):
                  Intermmediate_loss_module = "MSELoss",
                  no_students = 4,
                  no_blocks = 3,
-                 T = 3
+                 T = 3,
+                 Adaptation_use = True,
+                 contribution_ratios = [1.0,1.0,1.0]
                  ):
 
         # Loss module for combined loss computation from three individual losses
@@ -124,9 +151,11 @@ class Combined_Loss(nn.Module):
         self.Normal_Loss = Normal_Loss(pretrain_mode=pretrain_mode, loss_module=Normal_loss_module)
         self.Intermmediate_loss = Intermmediate_loss(no_students=no_students,
                                                      no_blocks= no_blocks,
-                                                     Loss_module=Intermmediate_loss_module
+                                                     Loss_module=Intermmediate_loss_module,
+                                                     Adaptation_use = Adaptation_use
                                                      )
         self.KL_Loss = KL_Loss(T=T) 
+        self.contribution_ratios = contribution_ratios
         self.Individual_loss = []   
 
         if pretrain_mode:
@@ -162,13 +191,13 @@ class Combined_Loss(nn.Module):
 
         Loss_A = sum(Individual_normal_losses)
         self.Individual_loss.append(Loss_A.item())
-        Combined_loss += Individual_normal_losses[0]
+        Combined_loss += self.contribution_ratios[0]*Individual_normal_losses[0]
 
         # Intermmediate loss computation 
 
         Loss_B = self.Intermmediate_loss(intermmediate_maps)
         self.Individual_loss.append(Loss_B.item())
-        Combined_loss += Loss_B
+        Combined_loss += self.contribution_ratios[1]*Loss_B
 
         # KL loss computation 
 
@@ -179,7 +208,7 @@ class Combined_Loss(nn.Module):
             Student_pred = preds[i]
             Loss_C += self.KL_Loss(teacher_pred,Student_pred)
 
-        Combined_loss +=Loss_C
+        Combined_loss += self.contribution_ratios[2]*Loss_C
         self.Individual_loss.append(Loss_C.item())
 
         return Combined_loss,Individual_normal_losses

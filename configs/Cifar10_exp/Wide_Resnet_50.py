@@ -12,7 +12,7 @@ Choose DL model from  "Resnet18", "Resnet34", "Resnet50", "Resnet101", "Resnet15
 
 '''
 model = dict(
-        name ="Densenet_12_100",
+        name ="Wide_Resnet50_2",
         pretrained = False,           # Select between True and False
         No_students = 5,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
@@ -40,7 +40,7 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=48,
+        batch_size=128,
         shuffle=True,
         num_workers=20
     ),
@@ -65,7 +65,7 @@ train_cfg = dict(
         L2="KL_Loss",             # Loss for teacher, student probability comparision
         L3="MSELoss",              # Loss type for Intermmediate representation loss
         Adaptation_use = True,     # Use Adaptation layers for intermediate loss
-        contribution_ratios = [1.0,1.0,1.0] # Contribution ratios for all losses 
+        contribution_ratios = [0.4,0.2,0.4] # Contribution ratios for all losses 
                                             # 0: Teacher Normal loss 
                                             # 1: Intermediate Loss
                                             # 2: Student KL Loss
@@ -80,18 +80,18 @@ train_cfg = dict(
         #step_size=15,
         #exp_gamma=0.1,
         #verbose=True
-        milestones=[170,250],   # For MultiStepLR
+        milestones=[70,150,210,270],   # For MultiStepLR
         last_epoch=-1,
         gamma=0.1
     ),
 
 
     teacher_pretraining= False,
-    pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on
+    pretraining_epochs= 5,             # epochs for which to pretrain the pseudo teacher on
     KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
-    epochs=350,
+    epochs=400,
     training_store_root="../Model_storage"
 )
 
@@ -101,8 +101,8 @@ train_cfg = dict(
 
 Single_model_mode = None               # Use for training baseline single student model. Select from None,0,1,2,3 ..
 
-Train_resume = False
+Train_resume = True
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_31_19_34'
-Load_Epoch = 211
+Load_run_id = '02_09_12_55'
+Load_Epoch = 1

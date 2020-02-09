@@ -12,11 +12,11 @@ Choose DL model from  "Resnet18", "Resnet34", "Resnet50", "Resnet101", "Resnet15
 
 '''
 model = dict(
-        name ="Densenet_12_100",
+        name ="Wide_Resnet50_2",
         pretrained = False,           # Select between True and False
         No_students = 5,              # Number of student models to create for training
         No_blocks = 3,                # Number of blocks to create for intermmediate representation comparision
-        DataParallel = True,         # Select between breaking single model onto
+        DataParallel = False,         # Select between breaking single model onto
         Multi_GPU_replica = False,    # multiple GPUs or replicating model on 
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
@@ -40,7 +40,7 @@ dataset_cfg = dict(
         download= False    # Keep true to download dataset through torch API
     ),
     train_cfg=dict(
-        batch_size=48,
+        batch_size=128,
         shuffle=True,
         num_workers=20
     ),
@@ -80,18 +80,18 @@ train_cfg = dict(
         #step_size=15,
         #exp_gamma=0.1,
         #verbose=True
-        milestones=[170,250],   # For MultiStepLR
+        milestones=[100,180,240,300],   # For MultiStepLR
         last_epoch=-1,
         gamma=0.1
     ),
 
 
     teacher_pretraining= False,
-    pretraining_epochs= 10,             # epochs for which to pretrain the pseudo teacher on
-    KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
+    pretraining_epochs= 5,             # epochs for which to pretrain the pseudo teacher on
+    KL_loss_temperature = 2,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
-    epochs=350,
+    epochs=400,
     training_store_root="../Model_storage"
 )
 
@@ -99,10 +99,10 @@ train_cfg = dict(
 # Training Resume settings
 # Select from either resuming training or validating model on test set 
 
-Single_model_mode = None               # Use for training baseline single student model. Select from None,0,1,2,3 ..
+Single_model_mode = 4               # Use for training baseline single student model. Select from None,0,1,2,3 ..
 
-Train_resume = False
+Train_resume = True
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '01_31_19_34'
-Load_Epoch = 211
+Load_run_id = '02_08_10_27'
+Load_Epoch = 1

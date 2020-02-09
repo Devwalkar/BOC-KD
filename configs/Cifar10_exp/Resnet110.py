@@ -63,7 +63,12 @@ train_cfg = dict(
     criterion=dict(
         L1='CrossEntropyLoss',    # Loss type for normal label loss 
         L2="KL_Loss",             # Loss for teacher, student probability comparision
-        L3="MSELoss"              # Loss type for Intermmediate representation loss
+        L3="MSELoss",              # Loss type for Intermmediate representation loss
+        Adaptation_use = True,     # Use Adaptation layers for intermediate loss
+        contribution_ratios = [1.0,1.0,1.0] # Contribution ratios for all losses 
+                                            # 0: Teacher Normal loss 
+                                            # 1: Intermediate Loss
+                                            # 2: Student KL Loss
     ),
 
     scheduler=dict(

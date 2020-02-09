@@ -89,6 +89,8 @@ def trainer(configer,model,Train_loader,Val_loader):
     L1_loss_name = loss_cfg['L1']
     L2_loss_name = loss_cfg.pop('L2')
     L3_loss_name = loss_cfg.pop('L3')
+    Adaptation_use = loss_cfg.pop("Adaptation_use")
+    contribution_ratios = loss_cfg.pop("contribution_ratios")
     Current_cfg["L1"] = L1_loss_name
 
     no_blocks = Model_cfg["No_blocks"]
@@ -105,7 +107,9 @@ def trainer(configer,model,Train_loader,Val_loader):
                  Intermmediate_loss_module = L3_loss_name,
                  no_students = no_students,
                  no_blocks = no_blocks,
-                 T = Temp         
+                 T = Temp,
+                 Adaptation_use = Adaptation_use,
+                 contribution_ratios = contribution_ratios         
                  )
 
     Current_cfg["Loss_criterion"] = loss
