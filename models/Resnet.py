@@ -457,6 +457,7 @@ class BIO_Resnet(nn.Module):
             if i==0:
                 Final_out,Inter_reps = self.student_models[0](x)
                 Combined_student_outs = Final_out.unsqueeze(1)
+                Inter_reps = [single_rep.detach() for single_rep in Inter_reps]
             else:
                 Final_out,Inter_reps = self.student_models[i](x_copy) if self.Common_Base else self.student_models[i](x)
                 Combined_student_outs = torch.cat((Combined_student_outs,Final_out.unsqueeze(1)),dim=1) # Combined_student_outs shape : (Batch_size,no_students,num_classes) 

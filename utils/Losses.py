@@ -189,9 +189,10 @@ class Combined_Loss(nn.Module):
 
         Individual_normal_losses = self.Normal_Loss(preds,labels)
 
-        Loss_A = sum(Individual_normal_losses)
-        self.Individual_loss.append(Loss_A.item())
-        Combined_loss += self.contribution_ratios[0]*Individual_normal_losses[0]
+        T_Loss = sum(Individual_normal_losses)
+        Loss_A = sum(Individual_normal_losses[1:])
+        self.Individual_loss.append(T_Loss.item())
+        Combined_loss += self.contribution_ratios[0]*Loss_A
 
         # Intermmediate loss computation 
 

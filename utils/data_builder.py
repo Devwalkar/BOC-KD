@@ -5,6 +5,7 @@ import torch
 import os 
 from .Caltech_loader import Caltech256 
 from .ImageNet_loader import ImageNetDataset
+from .CUB2011_loader import Cub2011
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -48,6 +49,34 @@ def Dataset_Loader(configer):
 
             test_transform = transforms.Compose([transforms.ToTensor(),
                                             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+                                            ])
+
+    elif Dataset_name == "CIFAR100":
+            img_transform  = transforms.Compose([transforms.Pad(4),
+                                            #transforms.RandomAffine((-20,20)),
+                                            transforms.RandomHorizontalFlip(p=0.5),
+                                            transforms.RandomCrop((32,32)),
+                                            transforms.ToTensor()
+                                            #transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)) 
+                                            ])
+
+            test_transform = transforms.Compose([transforms.ToTensor()
+                                            #transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+                                            ])
+
+    elif Dataset_name == "CUB2011":
+            img_transform  = transforms.Compose([transforms.Resize((64,64)),
+                                            transforms.Pad(4),
+                                            #transforms.RandomAffine((-20,20)),
+                                            transforms.RandomHorizontalFlip(p=0.5),
+                                            transforms.RandomCrop((64,64)),
+                                            transforms.ToTensor()
+                                            #transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)) 
+                                            ])
+
+            test_transform = transforms.Compose([transforms.Resize((64,64)),
+                                            transforms.ToTensor()
+                                            #transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
                                             ])
 
     elif Dataset_name == "Imagenet":
@@ -171,6 +200,17 @@ def Dataset_Loader(configer):
 
         Trainloader = ImageNetDataset(os.path.join(Data_root,"ImageNet/ILSVRC-train.lmdb"),transform=img_transform)
         Testloader = ImageNetDataset(os.path.join(Data_root,"ImageNet/ILSVRC-val.lmdb"),transform=test_transform)
+
+    elif Dataset_name == "CUB2011":
+
+        if Data_download:
+
+            Trainloader = Cub2011(Data_root,train=True,transform = img_transform,download=True)
+            Testloader = Cub2011(Data_root,train=False,transform = test_transform,download=True)
+
+        else:
+            Trainloader = Cub2011(Data_root,train=True,transform = img_transform,download=False)
+            Testloader = Cub2011(Data_root,train=False,transform = test_transform,download=False)
 
     else:
         raise ImportError("Dataset not supported")   

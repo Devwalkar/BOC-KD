@@ -64,6 +64,7 @@ def trainer(configer,model,Train_loader,Val_loader):
 
     # Prepare optimizer
     optim_cfg = Train_cfg['optimizer']
+    lr = optim_cfg["lr"]
     optim_name = optim_cfg.pop('name')
     print('### SELECTED OPTIMIZER:', optim_name)
     optim_cls = getattr(optim, optim_name)
@@ -212,6 +213,16 @@ def trainer(configer,model,Train_loader,Val_loader):
         
         for k in range(3):
             Train_ind_losses[k].append(Epoch_train_individual_loss[k])
+
+        if i == start_epoch:
+            for layers_per_block in loss.Intermmediate_loss.adaptation_layers:
+                for u in layers_per_block:
+                    param_list.append({'params':u.parameters(),'lr':lr*0.5})          # Reducing global lr by 0.01 for adaptation layer rate  
+            
+            optimizer = optim_cls(param_list, **optim_cfg)
+            scheduler = scheduler_cls(optimizer, **scheduler_cfg)
+            Current_cfg["Optimizer"] = optimizer
+            Current_cfg["scheduler"] = scheduler
 
         if (i%Test_interval) == 0:
 
@@ -374,6 +385,7 @@ def Single_Model_training(Current_cfg,model,Train_loader,Val_loader):
     Load_epoch = Current_cfg["Load_epoch"] 
 
     Best_Val_accuracy = 0
+    Val_accuracies = []
     criterion = Total_loss(pretrain_mode=True,
                                Normal_loss_module = Current_cfg["L1"]        
                 )
@@ -454,12 +466,13 @@ def Single_Model_training(Current_cfg,model,Train_loader,Val_loader):
                         flush=True)
 
             Val_accuracy = (float(Total_val_correct)/Total_val_count)*100
+            Val_accuracies.append(Val_accuracy)
             print('\nValidation epoch results --> Accuracy: {:.3f}% | Overall Loss: {:.3f}'.format(Val_accuracy,  
                                                                                                     float(running_val_loss)/num_val_batches
                                                                                                     ))
             if Val_accuracy > Best_Val_accuracy:
                 Best_Val_accuracy = Val_accuracy
-                Model_State_Saver(model,Current_cfg=Current_cfg,i=i,Single_model_mode=True)
+                Model_State_Saver(model,Current_cfg=Current_cfg,i=i,Val_accuracies=Val_accuracies, Single_model_mode=True)
 
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
                 scheduler.step(Val_accuracy)
@@ -682,7 +695,7 @@ def Model_State_Saver(model,
                               "Student_{}".format(Current_cfg["Student_model"]),"Epoch_{}".format(i+1),"BaseNet.pth"))
         torch.save(model.student_models[Current_cfg["Student_model"]].state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',
                          "Student_training","Student_{}".format(Current_cfg["Student_model"]),"Epoch_{}".format(i+1),"Non_BaseNet.pth"))
-
+        np.save(os.path.join(Store_root,run_id,"Accuracy_arrays",'Validation',"Student_Valid_Accuracies.npy"),np.asarray(Val_accuracies))
         return None
 
     elif configer is None:

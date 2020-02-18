@@ -20,7 +20,7 @@ model = dict(
         Multi_GPU_replica = False,    # multiple GPUs or replicating model on 
                                       # multiple GPUs.Only select either of them
         Common_base_freeze = False,   # This freezes the common base to all the student models
-        Collective_Base_gradient = False, # This passes gradients from all student back to the common base
+        Collective_Base_gradient = True, # This passes gradients from all student back to the common base
         gpu=[0,1],              # For Resnet50(4 stu) recommended 2 GPUs, 
                                       # For Resnet101(4 stu) 2 GPUs, Resnet152(5 stu) 3 GPUs
         )
@@ -80,7 +80,7 @@ train_cfg = dict(
         #step_size=15,
         #exp_gamma=0.1,
         #verbose=True
-        milestones=[100,180,240,300],   # For MultiStepLR
+        milestones=[70,150,210,270],    # For MultiStepLR
         last_epoch=-1,
         gamma=0.1
     ),
@@ -88,7 +88,7 @@ train_cfg = dict(
 
     teacher_pretraining= False,
     pretraining_epochs= 5,             # epochs for which to pretrain the pseudo teacher on
-    KL_loss_temperature = 2,            # Temperature for creating softened log softmax for KL loss 
+    KL_loss_temperature = 3,            # Temperature for creating softened log softmax for KL loss 
     test_interval = 10,
     plot_accuracy_graphs=True,
     epochs=400,
@@ -104,5 +104,5 @@ Single_model_mode = 4               # Use for training baseline single student m
 Train_resume = True
 Validate_only = False
 Validate_student_no = 0                 # This represents the version of student model you want to validate
-Load_run_id = '02_08_10_27'
+Load_run_id = '02_09_20_35'
 Load_Epoch = 1
