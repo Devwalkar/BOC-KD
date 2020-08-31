@@ -41,6 +41,7 @@ def depth_channel_computer(no_blocks = 3,
                            ):
 
     Depth_channels_list = []
+    Expansion_fix_list = []
 
     if no_blocks==1:
         for j in range(no_students):
@@ -48,6 +49,10 @@ def depth_channel_computer(no_blocks = 3,
                                         original_channels[1],
                                         int(original_channels[2]*(float(no_students-j)/no_students))
                                         ])
+            Expansion_fix_list.append([1,
+                                       1,
+                                       float(no_students)/(no_students-j)
+                                       ])
     
     elif no_blocks==2:
         for j in range(no_students):
@@ -55,26 +60,35 @@ def depth_channel_computer(no_blocks = 3,
                                         int(original_channels[1]*(float(no_students-j)/no_students)),
                                         int(original_channels[2]*(float(no_students-j)/no_students))
                                         ])       
-
+            Expansion_fix_list.append([1,
+                                       float(no_students)/(no_students-j),
+                                       float(no_students)/(no_students-j)
+                                       ])
     elif no_blocks==3:
         for j in range(no_students):
             Depth_channels_list.append([int(original_channels[0]*(float(no_students-j)/no_students)),
                                         int(original_channels[1]*(float(no_students-j)/no_students)),
                                         int(original_channels[2]*(float(no_students-j)/no_students))
                                         ])    
+            Expansion_fix_list.append([float(no_students)/(no_students-j),
+                                       float(no_students)/(no_students-j),
+                                       float(no_students)/(no_students-j)
+                                       ])
 
     else:
         raise IndexError("No blocks can only be 1,2 or 3")
 
-    return Depth_channels_list
+    return Depth_channels_list,Expansion_fix_list
 
 
 class BasicBlock(nn.Module):
+
     expansion = 1
+
     __constants__ = ['downsample']
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,downsample_fix = None,
+                 base_width=64, dilation=1, norm_layer=None, expansion_fix = 1):
         super(BasicBlock, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -86,9 +100,16 @@ class BasicBlock(nn.Module):
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(planes, planes)
-        self.bn2 = norm_layer(planes)
+        self.expansion_fix = expansion_fix
+        if expansion_fix !=1:
+            self.conv2 = conv3x3(planes, int(expansion_fix*planes))
+            self.bn2 = norm_layer(int(expansion_fix*planes))
+        else:
+            self.conv2 = conv3x3(planes, planes)
+            self.bn2 = norm_layer(planes)
+
         self.downsample = downsample
+        self.downsample_fix = downsample_fix
         self.stride = stride
 
     def forward(self, x):
@@ -101,7 +122,10 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
-        if self.downsample is not None:
+        if (self.downsample is not None):
+            identity = self.downsample(x)
+
+        if (self.downsample_fix is not None) and (self.expansion_fix !=1):
             identity = self.downsample(x)
 
         out += identity
@@ -245,10 +269,11 @@ class Resnet_Student(nn.Module):
 
     # This builds up student model assuming outputs from the Base ResNet model
 
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
+    def __init__(self, block, layers,Expansion_fix, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
                  norm_layer=None,
-                 depth_channels = [128,256,512]
+                 depth_channels = [128,256,512],
+
                  ):
 
         super(Resnet_Student, self).__init__()
@@ -267,15 +292,17 @@ class Resnet_Student(nn.Module):
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
+        self.First_block = True
 
         self.layer2 = self._make_layer(block, depth_channels[0], layers[1], stride=2,
-                                       dilate=replace_stride_with_dilation[0])
+                                       dilate=replace_stride_with_dilation[0],Expansion_fix= Expansion_fix[0])
         self.layer3 = self._make_layer(block, depth_channels[1], layers[2], stride=2,
-                                       dilate=replace_stride_with_dilation[1])
+                                       dilate=replace_stride_with_dilation[1],Expansion_fix= Expansion_fix[1])
         self.layer4 = self._make_layer(block, depth_channels[2], layers[3], stride=2,
-                                       dilate=replace_stride_with_dilation[2])
+                                       dilate=replace_stride_with_dilation[2],Expansion_fix= Expansion_fix[2])
+
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(depth_channels[2] * block.expansion, num_classes)
+        self.fc = nn.Linear(depth_channels[2] * int(block.expansion*Expansion_fix[2]), num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -294,25 +321,40 @@ class Resnet_Student(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
+    def _make_layer(self, block, planes, blocks,Expansion_fix, stride=1, dilate=False):
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
         if dilate:
             self.dilation *= stride
             stride = 1
+
+        First_block_fix = 1 if self.First_block else Expansion_fix
+        self.First_block = False
+        
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                conv1x1(self.inplanes, planes * block.expansion, stride),
-                norm_layer(planes * block.expansion),
+                conv1x1(int(First_block_fix*self.inplanes), planes * block.expansion, stride),
+                norm_layer(planes * block.expansion)
             )
 
+        downsample_fix = nn.Sequential(
+                conv1x1(planes, planes * int(Expansion_fix*block.expansion), stride),
+                norm_layer(planes * block.expansion)
+            )        
+
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
+        layers.append(block(int(First_block_fix*self.inplanes), planes, stride, downsample, self.groups,
                             self.base_width, previous_dilation, norm_layer))
         self.inplanes = planes * block.expansion
-        for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes, groups=self.groups,
+        for i in range(1, blocks):
+
+            if i == (blocks-1):
+                layers.append(block(planes, planes,downsample_fix=downsample_fix, groups=self.groups,
+                                base_width=self.base_width, dilation=self.dilation,
+                                norm_layer=norm_layer,expansion_fix = Expansion_fix))
+            else:
+                layers.append(block(self.inplanes, planes, groups=self.groups,
                                 base_width=self.base_width, dilation=self.dilation,
                                 norm_layer=norm_layer))
 
@@ -397,7 +439,9 @@ class BIO_Resnet(nn.Module):
                                                       width_per_group=width_per_group, 
                                                       replace_stride_with_dilation=None,
                                                       norm_layer=None,
-                                                      depth_channels=depth_channels)
+                                                      depth_channels=depth_channels,
+                                                      Expansion_fix=Expansion_fix
+                                                      )
 
         #self.student_models.append(Student_M.to(device))
         

@@ -10,6 +10,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 def Model_builder(configer):
 
     model_name = configer.model['name']
+    No_students = configer.model["No_students"]
+    No_blocks = configer.model["No_blocks"]
     No_classes = configer.dataset_cfg["id_cfg"]["num_classes"]
     model_pretrained = configer.model['pretrained']
     model_dataparallel = configer.model["DataParallel"]
