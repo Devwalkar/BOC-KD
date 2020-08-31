@@ -24,8 +24,6 @@ from utils.Model_builder import Model_builder
 from utils.Losses import Combined_Loss as Total_loss
 from utils.Accuracy_Saver_and_Plotter import saver_and_plotter
 
-import pretrainedmodels as PM
-
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def parser():
@@ -86,13 +84,13 @@ def trainer(configer,model,Train_loader,Val_loader):
     Current_cfg["No_students"] = no_students
 
     # Prepare loss function(s)
-    loss_cfg = Train_cfg.pop('criterion')
-    L1_loss_name = loss_cfg['L1']
-    L2_loss_name = loss_cfg.pop('L2')
-    L3_loss_name = loss_cfg.pop('L3')
-    Adaptation_use = loss_cfg.pop("Adaptation_use")
+    loss_cfg            = Train_cfg.pop('criterion')
+    L1_loss_name        = loss_cfg['L1']
+    L2_loss_name        = loss_cfg.pop('L2')
+    L3_loss_name        = loss_cfg.pop('L3')
+    Adaptation_use      = loss_cfg.pop("Adaptation_use")
     contribution_ratios = loss_cfg.pop("contribution_ratios")
-    Current_cfg["L1"] = L1_loss_name
+    Current_cfg["L1"]   = L1_loss_name
 
     no_blocks = Model_cfg["No_blocks"]
     Temp = Train_cfg["KL_loss_temperature"]
@@ -102,16 +100,15 @@ def trainer(configer,model,Train_loader,Val_loader):
     print('### SELECTED LOSS FUNCTION:\nL1:{0}\nL2:{1}\nL3:{2}\n'.format(L1_loss_name,L2_loss_name,L3_loss_name))
 
     # Intializing overall loss computation
-
     loss = Total_loss(pretrain_mode=False,
-                 Normal_loss_module = L1_loss_name,
-                 Intermmediate_loss_module = L3_loss_name,
-                 no_students = no_students,
-                 no_blocks = no_blocks,
-                 T = Temp,
-                 Adaptation_use = Adaptation_use,
-                 contribution_ratios = contribution_ratios         
-                 )
+                      Normal_loss_module = L1_loss_name,
+                      Intermmediate_loss_module = L3_loss_name,
+                      no_students = no_students,
+                      no_blocks = no_blocks,
+                      T = Temp,
+                      Adaptation_use = Adaptation_use,
+                      contribution_ratios = contribution_ratios         
+                      )
 
     Current_cfg["Loss_criterion"] = loss
 
@@ -137,18 +134,18 @@ def trainer(configer,model,Train_loader,Val_loader):
 
     # Getting current run_id
 
-    Current_cfg["Run_id"] = Load_run_id if Resume else get_run_id() 
-    Current_cfg["Store_root"] = Store_root
+    Current_cfg["Run_id"]       = Load_run_id if Resume else get_run_id() 
+    Current_cfg["Store_root"]   = Store_root
     Current_cfg["DataParallel"] = configer.model["DataParallel"]
-    Current_cfg["Dataset"]  = configer.dataset_cfg['id_cfg']['name']
+    Current_cfg["Dataset"]      = configer.dataset_cfg['id_cfg']['name']
 
     # Loading Training configs 
 
-    Epochs = Train_cfg["epochs"]
-    Test_interval = Train_cfg["test_interval"]
-    Current_cfg["Plot_Accuracy"] = Train_cfg["plot_accuracy_graphs"]
+    Epochs                         = Train_cfg["epochs"]
+    Test_interval                  = Train_cfg["test_interval"]
+    Current_cfg["Plot_Accuracy"]   = Train_cfg["plot_accuracy_graphs"]
     Current_cfg["pretrain_epochs"] = Train_cfg["pretraining_epochs"]
-    Current_cfg["test_interval"] = Test_interval
+    Current_cfg["test_interval"]   = Test_interval
     Current_cfg["Baseline_Epochs"] = Epochs
 
     # Single model baseline training
@@ -177,15 +174,29 @@ def trainer(configer,model,Train_loader,Val_loader):
     if Resume:
         load_path = os.path.join(Store_root,Load_run_id,"Accuracy_arrays")
 
-        Train_accuracies = [list(np.load(os.path.join(load_path,"Training","Train_Accuracy_for_Combined_Teacher.npy"),encoding="bytes"))]
-        Train_accuracies += [list(np.load(os.path.join(load_path,"Training","Train_Accuracy_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]        
-        Train_losses = [list(np.load(os.path.join(load_path,"Training","Train_loss_for_Overall_Loss.npy"),encoding="bytes"))]
-        Train_losses += [list(np.load(os.path.join(load_path,"Training","Train_loss_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]
+        Train_accuracies = [list(np.load(os.path.join(load_path,"Training",
+                            "Train_Accuracy_for_Combined_Teacher.npy"),encoding="bytes"))]
 
-        Val_accuracies = [list(np.load(os.path.join(load_path,"Validation","Valid_Accuracies_for_Combined_Teacher.npy"),encoding="bytes"))]
-        Val_accuracies += [list(np.load(os.path.join(load_path,"Validation","Valid_Accuracies_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]        
-        Val_losses = [list(np.load(os.path.join(load_path,"Validation","Val_loss_for_Overall_Loss.npy"),encoding="bytes"))]
-        Val_losses += [list(np.load(os.path.join(load_path,"Validation","Val_loss_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]
+        Train_accuracies += [list(np.load(os.path.join(load_path,"Training",
+                            "Train_Accuracy_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)] 
+
+        Train_losses = [list(np.load(os.path.join(load_path,"Training",
+                        "Train_loss_for_Overall_Loss.npy"),encoding="bytes"))]
+
+        Train_losses += [list(np.load(os.path.join(load_path,"Training",
+                         "Train_loss_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]
+
+        Val_accuracies = [list(np.load(os.path.join(load_path,"Validation",
+                          "Valid_Accuracies_for_Combined_Teacher.npy"),encoding="bytes"))]
+
+        Val_accuracies += [list(np.load(os.path.join(load_path,"Validation",
+                           "Valid_Accuracies_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]  
+
+        Val_losses = [list(np.load(os.path.join(load_path,"Validation",
+                      "Val_loss_for_Overall_Loss.npy"),encoding="bytes"))]
+
+        Val_losses += [list(np.load(os.path.join(load_path,"Validation",
+                       "Val_loss_for_Student_{}.npy".format(i+1)),encoding="bytes")) for i in range(no_students)]
      
     else:
         Train_accuracies = [[] for i in range(no_students+1)]
@@ -205,7 +216,12 @@ def trainer(configer,model,Train_loader,Val_loader):
 
     for i in range(start_epoch,start_epoch+Epochs):
 
-        model,Epoch_train_set_accuracy,Epoch_train_set_loss,Epoch_train_individual_loss = Train_epoch(configer,model,Train_loader,Current_cfg,i)
+        model,Epoch_train_set_accuracy,Epoch_train_set_loss,Epoch_train_individual_loss = Train_epoch(configer,
+                                                                                                      model,
+                                                                                                      Train_loader,
+                                                                                                      Current_cfg,
+                                                                                                      i
+                                                                                                      )
 
         for j in range(no_students+1):
             Train_accuracies[j].append(Epoch_train_set_accuracy[j])
@@ -226,7 +242,12 @@ def trainer(configer,model,Train_loader,Val_loader):
 
         if (i%Test_interval) == 0:
 
-            model,Epoch_Val_set_accuracy,Epoch_Val_set_loss,Epoch_Val_individual_loss = Val_epoch(configer,model,Val_loader,Current_cfg,i)           
+            model,Epoch_Val_set_accuracy,Epoch_Val_set_loss,Epoch_Val_individual_loss = Val_epoch(configer,
+                                                                                                  model,
+                                                                                                  Val_loader,
+                                                                                                  Current_cfg,
+                                                                                                  i
+                                                                                                  )           
 
             for j in range(no_students+1):
                 Val_accuracies[j].append(Epoch_Val_set_accuracy[j])
@@ -240,7 +261,13 @@ def trainer(configer,model,Train_loader,Val_loader):
                 Best_Val_accuracy = Epoch_Val_set_accuracy[0]
 
             print("----- Saving model state")
-            Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
+            Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,
+                                                                          Train_ind_losses,
+                                                                          Val_accuracies,
+                                                                          Val_losses,
+                                                                          Val_ind_losses,
+                                                                          i
+                                                                          )
 
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
 
@@ -250,7 +277,13 @@ def trainer(configer,model,Train_loader,Val_loader):
                 
             scheduler.step()
 
-    Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,Train_ind_losses,Val_accuracies,Val_losses,Val_ind_losses,i)
+    Model_State_Saver(model,configer,Current_cfg,Train_accuracies,Train_losses,
+                                                                  Train_ind_losses,
+                                                                  Val_accuracies,
+                                                                  Val_losses,
+                                                                  Val_ind_losses,
+                                                                  i
+                                                                  )
 
 
 def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
@@ -264,17 +297,15 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
 
     # Training data
 
-    Epochs = Current_cfg["pretrain_epochs"]
-    optimizer = Current_cfg['Optimizer_pretrain']
-    Dataset = Current_cfg["Dataset"] 
-    scheduler = Current_cfg["scheduler"]
+    Epochs         = Current_cfg["pretrain_epochs"]
+    optimizer      = Current_cfg['Optimizer_pretrain']
+    Dataset        = Current_cfg["Dataset"] 
+    scheduler      = Current_cfg["scheduler"]
     scheduler_name = Current_cfg["scheduler_name"]
-    Test_interval = Current_cfg["test_interval"]
+    Test_interval  = Current_cfg["test_interval"]
 
     Best_pretrain_Val_accuracy = 0
-    criterion = Total_loss(pretrain_mode=True,
-                               Normal_loss_module = Current_cfg["L1"]        
-                )
+    criterion = Total_loss(pretrain_mode=True, Normal_loss_module = Current_cfg["L1"])
 
     print ('---------- Starting Psuedo Teacher Model Pre-Training\n')
     for i in range(Epochs):
@@ -285,14 +316,14 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
         start = time.time()
 
         # Some useful constants
-        num_train_batches = len(Train_loader)
-        num_val_batches = len(Val_loader)
-        running_train_loss = 0
-        running_val_loss = 0
+        num_train_batches   = len(Train_loader)
+        num_val_batches     = len(Val_loader)
+        running_train_loss  = 0
+        running_val_loss    = 0
         Total_train_correct = 0
-        Total_val_correct = 0
-        Total_train_count = 0
-        Total_val_count = 0
+        Total_val_correct   = 0
+        Total_train_count   = 0
+        Total_val_count     = 0
 
         for batch_idx, (Input, labels) in enumerate(Train_loader):
 
@@ -313,13 +344,13 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
 
             print('Iter: {}/{} | Running loss: {:.3f} | Time elapsed: {:.2f}'
                     ' mins'.format(batch_idx + 1, num_train_batches,
-                                    running_train_loss/(batch_idx + 1),
-                                    (time.time() - start) / 60), end='\r',
+                                   running_train_loss/(batch_idx + 1),
+                                   (time.time() - start) / 60), end='\r',
                     flush=True)
 
         print('\nTraining epoch results --> Accuracy: {:.3f}% | Overall Loss: {:.3f}'.format(float((Total_train_correct)/Total_train_count)*100,  
-                                                                                                            float(running_train_loss)/num_train_batches
-                                                                                                            ))
+                                                                                             float(running_train_loss)/num_train_batches
+                                                                                             ))
             
         if (i%Test_interval) == 0:
             model.eval()
@@ -341,14 +372,14 @@ def Model_Pretraining(Current_cfg,model,Train_loader,Val_loader):
 
                 print('Iter: {}/{} | Running loss: {:.3f} | Time elapsed: {:.2f}'
                         ' mins'.format(batch_idx + 1, num_val_batches,
-                                        running_val_loss/(batch_idx + 1),
-                                        (time.time() - start) / 60), end='\r',
-                        flush=True)
+                                       running_val_loss/(batch_idx + 1),
+                                       (time.time() - start) / 60), end='\r',
+                                       flush=True)
 
             Val_accuracy = (float(Total_val_correct)/Total_val_count)*100
             print('\nValidation epoch results --> Accuracy: {:.3f}% | Overall Loss: {:.3f}'.format(Val_accuracy,  
-                                                                                                    float(running_val_loss)/num_val_batches
-                                                                                                    ))
+                                                                                                   float(running_val_loss)/num_val_batches
+                                                                                                   ))
             if Val_accuracy > Best_pretrain_Val_accuracy:
                 Best_pretrain_Val_accuracy = Val_accuracy
                 Model_State_Saver(model,Current_cfg=Current_cfg,i=i)
@@ -374,15 +405,15 @@ def Single_Model_training(Current_cfg,model,Train_loader,Val_loader):
 
     # Training data
 
-    Epochs = Current_cfg["Baseline_Epochs"]
-    optimizer = Current_cfg["Baseline_optimizer"] 
-    Dataset = Current_cfg["Dataset"] 
-    scheduler = Current_cfg["scheduler"]
-    scheduler_name = Current_cfg["scheduler_name"]
-    Test_interval = Current_cfg["test_interval"]
+    Epochs             = Current_cfg["Baseline_Epochs"]
+    optimizer          = Current_cfg["Baseline_optimizer"] 
+    Dataset            = Current_cfg["Dataset"] 
+    scheduler          = Current_cfg["scheduler"]
+    scheduler_name     = Current_cfg["scheduler_name"]
+    Test_interval      = Current_cfg["test_interval"]
     Student_model_name = Current_cfg["Student_model"]
-    Resume = Current_cfg["Resume"]
-    Load_epoch = Current_cfg["Load_epoch"] 
+    Resume             = Current_cfg["Resume"]
+    Load_epoch         = Current_cfg["Load_epoch"] 
 
     Best_Val_accuracy = 0
     Val_accuracies = []
@@ -405,14 +436,14 @@ def Single_Model_training(Current_cfg,model,Train_loader,Val_loader):
         start = time.time()
 
         # Some useful constants
-        num_train_batches = len(Train_loader)
-        num_val_batches = len(Val_loader)
-        running_train_loss = 0
-        running_val_loss = 0
+        num_train_batches   = len(Train_loader)
+        num_val_batches     = len(Val_loader)
+        running_train_loss  = 0
+        running_val_loss    = 0
         Total_train_correct = 0
-        Total_val_correct = 0
-        Total_train_count = 0
-        Total_val_count = 0
+        Total_val_correct   = 0
+        Total_train_count   = 0
+        Total_val_count     = 0
 
         for batch_idx, (Input, labels) in enumerate(Train_loader):
 
@@ -433,13 +464,13 @@ def Single_Model_training(Current_cfg,model,Train_loader,Val_loader):
 
             print('Iter: {}/{} | Running loss: {:.3f} | Time elapsed: {:.2f}'
                     ' mins'.format(batch_idx + 1, num_train_batches,
-                                    running_train_loss/(batch_idx + 1),
-                                    (time.time() - start) / 60), end='\r',
+                                   running_train_loss/(batch_idx + 1),
+                                   (time.time() - start) / 60), end='\r',
                     flush=True)
 
         print('\nTraining epoch results --> Accuracy: {:.3f}% | Overall Loss: {:.3f}'.format(float((Total_train_correct)/Total_train_count)*100,  
-                                                                                                            float(running_train_loss)/num_train_batches
-                                                                                                            ))
+                                                                                             float(running_train_loss)/num_train_batches
+                                                                                             ))
             
         if (i%Test_interval) == 0:
             model.eval()
@@ -461,18 +492,18 @@ def Single_Model_training(Current_cfg,model,Train_loader,Val_loader):
 
                 print('Iter: {}/{} | Running loss: {:.3f} | Time elapsed: {:.2f}'
                         ' mins'.format(batch_idx + 1, num_val_batches,
-                                        running_val_loss/(batch_idx + 1),
-                                        (time.time() - start) / 60), end='\r',
+                                       running_val_loss/(batch_idx + 1),
+                                       (time.time() - start) / 60), end='\r',
                         flush=True)
 
             Val_accuracy = (float(Total_val_correct)/Total_val_count)*100
             Val_accuracies.append(Val_accuracy)
             print('\nValidation epoch results --> Accuracy: {:.3f}% | Overall Loss: {:.3f}'.format(Val_accuracy,  
-                                                                                                    float(running_val_loss)/num_val_batches
-                                                                                                    ))
+                                                                                                   float(running_val_loss)/num_val_batches
+                                                                                                   ))
             if Val_accuracy > Best_Val_accuracy:
                 Best_Val_accuracy = Val_accuracy
-                Model_State_Saver(model,Current_cfg=Current_cfg,i=i,Val_accuracies=Val_accuracies, Single_model_mode=True)
+                Model_State_Saver(model, Current_cfg=Current_cfg, i=i, Val_accuracies=Val_accuracies, Single_model_mode=True)
 
             if (scheduler is not None) and (scheduler_name == 'ReduceLROnPlateau'):
                 scheduler.step(Val_accuracy)
@@ -497,18 +528,18 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
 
     # Training essentials
 
-    optimizer = Current_cfg['Optimizer']
-    criterion = Current_cfg['Loss_criterion']
-    Dataset = configer.dataset_cfg['id_cfg']['name']
+    optimizer   = Current_cfg['Optimizer']
+    criterion   = Current_cfg['Loss_criterion']
+    Dataset     = configer.dataset_cfg['id_cfg']['name']
     No_students = configer.model["No_students"]
 
     # Some useful constants
-    num_train_batches = len(Train_loader)
-    running_combined_loss = 0
-    running_student_losses = np.zeros(No_students)
-    running_teacher_losses = 0
+    num_train_batches         = len(Train_loader)
+    running_combined_loss     = 0
+    running_student_losses    = np.zeros(No_students)
+    running_teacher_losses    = 0
     running_individual_losses = np.zeros(3)
-    Total_correct = np.zeros(No_students+1)
+    Total_correct             = np.zeros(No_students+1)
 
     Total_count = 0
 
@@ -523,8 +554,8 @@ def Train_epoch(configer,model,Train_loader,Current_cfg,i):
         Input = Input.float().to(device)
         labels = labels.to(device)
 
-        outputs,Intermmediate_maps = model(Input)
-        Combined_loss,Individual_normal_losses = criterion(outputs, labels, Intermmediate_maps)
+        outputs, Intermmediate_maps = model(Input)
+        Combined_loss, Individual_normal_losses = criterion(outputs, labels, Intermmediate_maps)
 
         optimizer.zero_grad()
         Combined_loss.backward()
@@ -607,8 +638,8 @@ def Val_epoch(configer,model,Val_loader,Current_cfg,i):
             Input = Input.float().to(device)
             labels = labels.to(device)
 
-            outputs,Intermmediate_maps = model(Input)
-            Combined_loss,Individual_normal_losses = criterion(outputs, labels, Intermmediate_maps)
+            outputs, Intermmediate_maps = model(Input)
+            Combined_loss, Individual_normal_losses = criterion(outputs, labels, Intermmediate_maps)
 
             running_combined_loss += Combined_loss.item()
             running_individual_losses += np.asarray(criterion.Individual_loss)
@@ -661,12 +692,12 @@ def Model_State_Saver(model,
                       Single_model_mode = False,
                       ):
 
-    Store_root = Current_cfg["Store_root"]
-    run_id = Current_cfg["Run_id"]
-    No_students = Current_cfg["No_students"]
+    Store_root    = Current_cfg["Store_root"]
+    run_id        = Current_cfg["Run_id"]
+    No_students   = Current_cfg["No_students"]
     plot_accuracy = Current_cfg["Plot_Accuracy"]
     Test_interval = Current_cfg["test_interval"]
-    Resume = Current_cfg["Resume"]
+    Resume        = Current_cfg["Resume"]
 
     if not os.path.isdir(os.path.join(Store_root,run_id)):
         os.mkdir(os.path.join(Store_root,run_id))
@@ -723,19 +754,18 @@ def Model_State_Saver(model,
             torch.save(model.student_models[g].state_dict(),os.path.join(Store_root,run_id,'Model_saved_states',"Epoch_{}".format(i+1),"student_{}.pth".format(g)))
 
     # Saving Accuracy and loss arrays and Plotting Training and Validation plots
-
     saver_and_plotter(Train_accuracies = Train_accuracies, 
-            Val_accuracies = Val_accuracies,
-			Train_losses = Train_losses,
-            Train_ind_losses = Train_ind_losses,
-			Val_losses = Val_losses,
-            Val_ind_losses = Val_ind_losses,
-			Store_root = Store_root,
-			run_id = run_id,
-			No_students = No_students,
-            plot_accuracy = plot_accuracy,
-            Test_interval = Test_interval
-			)
+                      Val_accuracies = Val_accuracies,
+                      Train_losses = Train_losses,
+                      Train_ind_losses = Train_ind_losses,
+                      Val_losses = Val_losses,
+                      Val_ind_losses = Val_ind_losses,
+                      Store_root = Store_root,
+                      run_id = run_id,
+                      No_students = No_students,
+                      plot_accuracy = plot_accuracy,
+                      Test_interval = Test_interval
+                      )
 
 
 def main(args):
@@ -757,14 +787,14 @@ def main(args):
     # Resuming training from saved checkpoint
     if configer.Train_resume or configer.Validate_only:
 
-        Store_root = configer.train_cfg["training_store_root"]
-        Load_run_id = configer.Load_run_id
-        Load_Epoch = configer.Load_Epoch
-        No_students = configer.model["No_students"]
-        model_name = configer.model["name"]
-        no_blocks = configer.model["No_blocks"]
-        Temp = configer.train_cfg["KL_loss_temperature"]
-        DataParallel = configer.model["DataParallel"]
+        Store_root        = configer.train_cfg["training_store_root"]
+        Load_run_id       = configer.Load_run_id
+        Load_Epoch        = configer.Load_Epoch
+        No_students       = configer.model["No_students"]
+        model_name        = configer.model["name"]
+        no_blocks         = configer.model["No_blocks"]
+        Temp              = configer.train_cfg["KL_loss_temperature"]
+        DataParallel      = configer.model["DataParallel"]
         Single_model_mode = configer.Single_model_mode
 
         if Single_model_mode is not None:
@@ -802,12 +832,12 @@ def main(args):
             loss_cfg = configer.train_cfg["criterion"]
 
             loss = Total_loss(pretrain_mode=False,
-                Normal_loss_module = loss_cfg["L1"],
-                Intermmediate_loss_module = loss_cfg["L3"],
-                no_students = No_students,
-                no_blocks = no_blocks,
-                T = Temp         
-                )
+                              Normal_loss_module = loss_cfg["L1"],
+                              Intermmediate_loss_module = loss_cfg["L3"],
+                              no_students = No_students,
+                              no_blocks = no_blocks,
+                              T = Temp         
+                              )
 
             Val_cfg = dict(Loss_criterion= loss)
 
@@ -816,7 +846,6 @@ def main(args):
             return None  
 
     # Training the model for config settings
-
     trainer(configer,model,Train_loader,Val_loader)
 
 
